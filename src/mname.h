@@ -39,5 +39,23 @@ struct mname_msg {
    uint16_t addl_len;
 } __attribute__( (packed) );
 
+#define m_name_is_response( pkt ) \
+   ((pkt->fields) & M_NAME_RESPONSE_FIELD)
+
+#define m_name_is_op_status( pkt ) \
+   ((pkt->fields) & M_NAME_OP_STATUS)
+
+#define m_name_is_authoritative( pkt ) \
+   ((pkt->fields) & M_NAME_AUTH_ANSWER_FIELD)
+
+#define m_name_is_truncated( pkt ) \
+   ((pkt->fields) & M_NAME_TRUNC_FIELD)
+
+#define m_name_is_recursion_req( pkt ) \
+   ((pkt->fields) & M_NAME_RECURSE_REQ_FIELD)
+
+#define m_name_is_recursion_avail( pkt ) \
+   ((pkt->fields) & M_NAME_RECURSE_AVAIL_FIELD)
+
 #endif /* MNAME_H */
 
