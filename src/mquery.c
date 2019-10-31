@@ -90,8 +90,22 @@ int main( int argc, char** argv ) {
          if( 0 != i && 0 == i % 20 ) {
             printf( "\n" );
          }
+         
+         /* Add some color. */
+         if( i < sizeof( struct mname_msg ) ) {
+            printf( "\033[0;31m" );
+         } else if(
+            i <= sizeof( struct mname_msg ) +
+            mname_get_q_domain_len( dns_msg, 0 )
+         ) {
+            printf( "\033[0;33m" );
+         } else {
+            printf( "\033[0;36m" );
+         }
+
          printf( "%02hhx ", buffer[i] );
       }
+      printf( "\033[0m" );
       printf( "\n" );
 
       printf( "dns:\n cli_addr_sz: %d\n is_response(): %d\n nslen: %d\n"
