@@ -4,20 +4,20 @@
 
 #include <stdint.h>
 
-#define M_NAME_RESPONSE_FIELD             0x8000
+#define M_NAME_RESPONSE_FIELD             0x0080
 
-#define M_NAME_OP_FIELD                   0x7000
-#define M_NAME_OP_STATUS                  0x1000
+#define M_NAME_OP_FIELD                   0x0070
+#define M_NAME_OP_STATUS                  0x0010
 
-#define M_NAME_AUTH_ANSWER_FIELD          0x0400
+#define M_NAME_AUTH_ANSWER_FIELD          0x0004
 
-#define M_NAME_TRUNC_FIELD                0x0200
+#define M_NAME_TRUNC_FIELD                0x0002
 
-#define M_NAME_RECURSE_REQ_FIELD          0x0100
+#define M_NAME_RECURSE_REQ_FIELD          0x0001
 
-#define M_NAME_RECURSE_AVAIL_FIELD        0x0080
+#define M_NAME_RECURSE_AVAIL_FIELD        0x0000
 
-#define M_NAME_RESPONSE_CODE_FIELD        0x000f
+#define M_NAME_RESPONSE_CODE_FIELD        0x0f00
 
 #define M_NAME_RESPONSE_CODE_NONE         0x000
 #define M_NAME_RESPONSE_CODE_FORMAT       0x001
