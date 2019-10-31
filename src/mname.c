@@ -73,8 +73,9 @@ uint16_t mname_get_q_type( struct mname_msg* msg_in, uint16_t idx ) {
 
    ptr += sizeof( struct mname_msg );
    ptr += mname_get_q_domain_len( msg_in, idx ); /* +1 for terminator. */
+   ptr += 1;
 
-   return *((uint16_t*)ptr);
+   return m_htons( *((uint16_t*)ptr) );
 }
 
 uint16_t mname_get_q_class( struct mname_msg* msg_in, uint16_t idx ) {
@@ -88,9 +89,9 @@ uint16_t mname_get_q_class( struct mname_msg* msg_in, uint16_t idx ) {
 
    ptr += sizeof( struct mname_msg );  /* Skip header. */
    ptr += mname_get_q_domain_len( msg_in, idx ); /* Skip Q domain. */
-   ptr += 4; /* Skip Q type. */
+   ptr += 3; /* Skip Q type. */
 
-   return *((uint16_t*)ptr);
+   return m_htons( *((uint16_t*)ptr) );
 }
 
 /**
