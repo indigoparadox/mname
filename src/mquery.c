@@ -99,6 +99,11 @@ int main( int argc, char** argv ) {
             mname_get_q_domain_len( dns_msg, 0 )
          ) {
             printf( "\033[0;33m" );
+         } else if(
+            i <= sizeof( struct mname_msg ) +
+            mname_get_q_domain_len( dns_msg, 0 ) + 4
+         ) {
+            printf( "\033[0;34m" );
          } else {
             printf( "\033[0;36m" );
          }
@@ -109,9 +114,14 @@ int main( int argc, char** argv ) {
       printf( "\n" );
 
       printf( "dns:\n cli_addr_sz: %d\n is_response(): %d\n nslen: %d\n"
-         " questions: %d\n domain: %s (%d)\n type: %d\n class: %d\n",
+         " questions: %d\n answers: %d\n ns: %d\n additional: %d\n"
+         " domain: %s (%d)\n type: %d\n class: %d\n",
          client_sz, m_name_is_response( dns_msg ), dns_msg->ns_len,
-         m_htons( dns_msg->questions_len ), domain_name,
+         m_htons( dns_msg->questions_len ),
+         m_htons( dns_msg->answers_len ),
+         m_htons( dns_msg->ns_len ),
+         m_htons( dns_msg->addl_len ),
+         domain_name,
          mname_get_q_domain_len( dns_msg, 0 ),
          mname_get_q_type( dns_msg, 0 ),
          mname_get_q_class( dns_msg, 0 ) );
