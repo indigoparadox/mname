@@ -81,9 +81,11 @@ struct mname_answer {
    ((pkt->fields) & M_NAME_RECURSE_AVAIL_FIELD)
 
 void mname_response( struct mname_msg* msg_in );
-int mname_get_q_domain_len( struct mname_msg* msg_in );
-int mname_get_q_domain( struct mname_msg* msg_in, char* buf, size_t buf_len );
-uint16_t mname_get_q_type( struct mname_msg* msg_in );
+int mname_get_q_domain_len( struct mname_msg* msg_in, uint16_t idx );
+int mname_get_q_domain(
+   struct mname_msg* msg_in, uint16_t idx, char* buf, size_t buf_len );
+uint16_t mname_get_q_type( struct mname_msg* msg_in, uint16_t idx );
+uint16_t mname_get_q_class( struct mname_msg* msg_in, uint16_t idx );
 
 #endif /* MNAME_H */
 

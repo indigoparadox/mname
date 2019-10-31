@@ -7,9 +7,15 @@ void mname_response( struct mname_msg* msg_in ) {
    msg_in->answers_len = m_htons( 1 );
 }
 
-int mname_get_q_domain_len( struct mname_msg* msg_in ) {
+int mname_get_q_domain_len( struct mname_msg* msg_in, uint16_t idx ) {
    uint8_t* ptr = (uint8_t*)msg_in;
    int len_out = 0;
+
+   if( idx > msg_in->questions_len ) {
+      return 0;
+   }
+
+   /* TODO: Move to the requested index. */
 
    /* Much quicker and simpler version of the loop from mname_get_q_domain(). */
    ptr += sizeof( struct mname_msg );
@@ -21,13 +27,22 @@ int mname_get_q_domain_len( struct mname_msg* msg_in ) {
    return len_out;
 }
 
-int mname_get_q_domain( struct mname_msg* msg_in, char* buf, size_t buf_len ) {
+int mname_get_q_domain(
+   struct mname_msg* msg_in, uint16_t idx, char* buf, size_t buf_len
+) {
    uint8_t* ptr = (uint8_t*)msg_in;
    uint16_t len = 0;
    size_t buf_idx = 0;
 
-   /* Grab the name into the buffer one segment at a time. */
+   if( idx > msg_in->questions_len ) {
+      return 0;
+   }
+
+   /* TODO: Move to the requested index. */
+
    ptr += sizeof( struct mname_msg );
+
+   /* Grab the name into the buffer one segment at a time. */
    do {
       /* Grab the name component length and move up by 2 bytes (16 bits). */
       len = *ptr;
@@ -47,11 +62,49 @@ int mname_get_q_domain( struct mname_msg* msg_in, char* buf, size_t buf_len ) {
    return buf_idx;
 }
 
-uint16_t mname_get_q_type( struct mname_msg* msg_in ) {
+uint16_t mname_get_q_type( struct mname_msg* msg_in, uint16_t idx ) {
    uint8_t* ptr = (uint8_t*)msg_in;
 
-   ptr += mname_get_q_domain_len( msg_in );
+   if( idx > msg_in->questions_len ) {
+      return 0;
+   }
+
+   /* TODO: Move to the requested index. */
+
+   ptr += sizeof( struct mname_msg );
+   ptr += mname_get_q_domain_len( msg_in, idx ) + 1; /* +1 for terminator. */
 
    return (uint16_t)*ptr;
+}
+
+uint16_t mname_get_q_class( struct mname_msg* msg_in, uint16_t idx ) {
+   uint8_t* ptr = (uint8_t*)msg_in;
+
+   if( idx > msg_in->questions_len ) {
+      return 0;
+   }
+
+   /* TODO: Move to the requested index. */
+
+   ptr += sizeof( struct mname_msg );  /* Skip header. */
+   ptr += mname_get_q_domain_len( msg_in, idx ) + 1; /* Skip Q domain. */
+   ptr += 2; /* Skip Q type. */
+
+   return (uint16_t)*ptr;
+}
+
+/**
+ * \brief   Get a pointer to an answer section.
+ * @param idx  The index of the section to return.
+ */
+uint16_t mname_get_a_ptr( struct mname_msg* msg_in, uint16_t idx ) {
+   uint8_t* ptr = (uint8_t*)msg_in;
+
+   ptr += sizeof( struct mname_msg );
+   ptr += mname_get_q_domain_len( msg_in, idx ) + 1;
+
+   /* TODO */
+
+   return 0;
 }
 

@@ -10,20 +10,23 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <assert.h>
 
 #define NAME_BUF_LEN 512
+#define MSG_BUF_LEN 512
 
 int main( int argc, char** argv ) {
    int sock = 0;
    int res = 0;
    struct sockaddr_in server;
    struct sockaddr_storage client;
-   char buffer[512] = { 0 };
+   char buffer[MSG_BUF_LEN] = { 0 };
    ssize_t count = 0;
    socklen_t client_sz = sizeof( struct sockaddr_storage );
    struct mname_msg* dns_msg = (struct mname_msg*)&buffer;
    int running = 1;
    char domain_name[NAME_BUF_LEN] = { 0 };
+   int i = 0;
 
    memset( &server, '\0', sizeof( struct sockaddr_in ) );
    memset( &client, '\0', sizeof( struct sockaddr_in ) );
@@ -67,14 +70,40 @@ int main( int argc, char** argv ) {
       }
 
       memset( domain_name, '\0', NAME_BUF_LEN );
-      mname_get_q_domain( dns_msg, domain_name, NAME_BUF_LEN );
+      mname_get_q_domain( dns_msg, 0, domain_name, NAME_BUF_LEN );
+
+      /* Pretty header for hex dump. */
+      i = 0;
+      do {
+         printf( "%02d ", i++ );
+      } while( 0 != i % 20 );
+      printf( "\n" );
+
+      i = 0;
+      do {
+         printf( "-" );
+      } while( 0 != ++i % 30 );
+      printf( "\n" );
+
+      /* Packet hex dump! */
+      for( i = 0 ; count > i ; i++ ) {
+         if( 0 != i && 0 == i % 20 ) {
+            printf( "\n" );
+         }
+         printf( "%02hhx ", buffer[i] );
+      }
+      printf( "\n" );
 
       printf( "dns:\n cli_addr_sz: %d\n is_response(): %d\n nslen: %d\n"
-         " questions: %d\n domain: %s (%d)\n type: %d\n",
+         " questions: %d\n domain: %s (%d)\n type: %d\n class: %d\n",
          client_sz, m_name_is_response( dns_msg ), dns_msg->ns_len,
          m_htons( dns_msg->questions_len ), domain_name,
-         mname_get_q_domain_len( dns_msg ),
-         mname_get_q_type( dns_msg ) );
+         mname_get_q_domain_len( dns_msg, 0 ),
+         mname_get_q_type( dns_msg, 0 ),
+         mname_get_q_class( dns_msg, 0 ) );
+
+      assert( 1 == mname_get_q_class( dns_msg, 0 ) );
+      assert( 1 == mname_get_q_type( dns_msg, 0 ) );
 
       mname_response( dns_msg );
 
