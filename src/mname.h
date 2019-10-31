@@ -57,5 +57,7 @@ struct mname_msg {
 #define m_name_is_recursion_avail( pkt ) \
    ((pkt->fields) & M_NAME_RECURSE_AVAIL_FIELD)
 
+void mname_response( struct mname_msg* msg_in );
+
 #endif /* MNAME_H */
 
