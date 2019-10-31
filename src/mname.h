@@ -3,6 +3,12 @@
 #define MNAME_H
 
 #include <stdint.h>
+#include <stddef.h>
+
+#ifndef m_htons
+/* TODO: Only have this work when we're on a CPU that needs it. */
+#define m_htons( n ) (((n >> 8) & 0x00ff) | ((n << 8) & 0xff00))
+#endif /* m_htons */
 
 #define M_NAME_RESPONSE_FIELD             0x0080
 
@@ -19,6 +25,7 @@
 
 #define M_NAME_RESPONSE_CODE_FIELD        0x0f00
 
+/* TODO: Format these for network byte order. */
 #define M_NAME_RESPONSE_CODE_NONE         0x000
 #define M_NAME_RESPONSE_CODE_FORMAT       0x001
 #define M_NAME_RESPONSE_CODE_SERVER       0x002
@@ -39,6 +46,16 @@ struct mname_msg {
    uint16_t addl_len;
 } __attribute__( (packed) );
 
+/*
+struct mname_question {
+   uint16_t 
+} __attribute__( (packed) );
+
+struct mname_answer {
+   uint16_t 
+} __attribute__( (packed) );
+*/
+
 #define m_name_is_response( pkt ) \
    ((pkt->fields) & M_NAME_RESPONSE_FIELD)
 
@@ -58,6 +75,7 @@ struct mname_msg {
    ((pkt->fields) & M_NAME_RECURSE_AVAIL_FIELD)
 
 void mname_response( struct mname_msg* msg_in );
+int mname_get_q_domain( struct mname_msg* msg_in, char* buf, size_t buf_len );
 
 #endif /* MNAME_H */
 
