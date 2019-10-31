@@ -10,6 +10,7 @@
 #define m_htons( n ) (((n >> 8) & 0x00ff) | ((n << 8) & 0xff00))
 #endif /* m_htons */
 
+/* TODO: Define these here in native order and use m_htons in code. */
 #define M_NAME_RESPONSE_FIELD             0x0080
 
 #define M_NAME_OP_FIELD                   0x0070
@@ -25,7 +26,8 @@
 
 #define M_NAME_RESPONSE_CODE_FIELD        0x0f00
 
-/* TODO: Format these for network byte order. */
+/* Below here are already in native order! */
+
 #define M_NAME_RESPONSE_CODE_NONE         0x000
 #define M_NAME_RESPONSE_CODE_FORMAT       0x001
 #define M_NAME_RESPONSE_CODE_SERVER       0x002
@@ -36,6 +38,10 @@
 #define M_NAME_RESPONSE_CODE_NX_RR_SET    0x008
 #define M_NAME_RESPONSE_CODE_NOT_AUTH     0x009
 #define M_NAME_RESPONSE_CODE_NOT_ZONE     0x010
+
+#define M_NAME_TYPE_A                     0x0001
+#define M_NAME_TYPE_MX                    0x000f
+#define M_NAME_TYPE_NS                    0x0002
 
 struct mname_msg {
    uint16_t id;
@@ -75,7 +81,9 @@ struct mname_answer {
    ((pkt->fields) & M_NAME_RECURSE_AVAIL_FIELD)
 
 void mname_response( struct mname_msg* msg_in );
+int mname_get_q_domain_len( struct mname_msg* msg_in );
 int mname_get_q_domain( struct mname_msg* msg_in, char* buf, size_t buf_len );
+uint16_t mname_get_q_type( struct mname_msg* msg_in );
 
 #endif /* MNAME_H */
 

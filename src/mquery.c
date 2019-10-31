@@ -70,9 +70,11 @@ int main( int argc, char** argv ) {
       mname_get_q_domain( dns_msg, domain_name, NAME_BUF_LEN );
 
       printf( "dns:\n cli_addr_sz: %d\n is_response(): %d\n nslen: %d\n"
-         " questions: %d\n domain: %s\n",
+         " questions: %d\n domain: %s (%d)\n type: %d\n",
          client_sz, m_name_is_response( dns_msg ), dns_msg->ns_len,
-         m_htons( dns_msg->questions_len ), domain_name );
+         m_htons( dns_msg->questions_len ), domain_name,
+         mname_get_q_domain_len( dns_msg ),
+         mname_get_q_type( dns_msg ) );
 
       mname_response( dns_msg );
 

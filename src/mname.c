@@ -7,6 +7,20 @@ void mname_response( struct mname_msg* msg_in ) {
    msg_in->answers_len = m_htons( 1 );
 }
 
+int mname_get_q_domain_len( struct mname_msg* msg_in ) {
+   uint8_t* ptr = (uint8_t*)msg_in;
+   int len_out = 0;
+
+   /* Much quicker and simpler version of the loop from mname_get_q_domain(). */
+   ptr += sizeof( struct mname_msg );
+   do {
+      len_out += *ptr + 1; /* +1 for sz octet. */
+      ptr += *ptr + 1;
+   } while( 0 != *ptr );
+
+   return len_out;
+}
+
 int mname_get_q_domain( struct mname_msg* msg_in, char* buf, size_t buf_len ) {
    uint8_t* ptr = (uint8_t*)msg_in;
    uint16_t len = 0;
@@ -31,5 +45,13 @@ int mname_get_q_domain( struct mname_msg* msg_in, char* buf, size_t buf_len ) {
    } while( 0 != *ptr && buf_idx < buf_len );
 
    return buf_idx;
+}
+
+uint16_t mname_get_q_type( struct mname_msg* msg_in ) {
+   uint8_t* ptr = (uint8_t*)msg_in;
+
+   ptr += mname_get_q_domain_len( msg_in );
+
+   return (uint16_t)*ptr;
 }
 
