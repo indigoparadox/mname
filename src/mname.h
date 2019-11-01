@@ -86,7 +86,7 @@ int mname_get_domain(
    const struct mname_msg* msg_in, uint16_t idx, char* buf, size_t buf_len );
 uint16_t mname_get_q_type( const struct mname_msg* msg_in );
 uint16_t mname_get_q_class( const struct mname_msg* msg_in );
-uint8_t* mname_get_ptr( const struct mname_msg* msg_in, uint16_t idx );
+uint16_t mname_get_offset( const struct mname_msg* msg_in, uint16_t idx );
 
 #endif /* MNAME_H */
 

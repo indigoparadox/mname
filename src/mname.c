@@ -8,10 +8,10 @@ void mname_response( struct mname_msg* msg_in ) {
 }
 
 int mname_get_domain_len( const struct mname_msg* msg_in, uint16_t idx ) {
-   uint8_t* ptr = NULL;
+   uint8_t* ptr = (uint8_t*)msg_in;
    int len_out = 0;
 
-   ptr = mname_get_ptr( msg_in, idx );
+   ptr += mname_get_offset( msg_in, idx );
 
    /* Much quicker and simpler version of the loop from mname_get_domain(). */
    do {
@@ -77,25 +77,25 @@ uint16_t mname_get_q_class( const struct mname_msg* msg_in ) {
  *          fields in header and reasoning.
  * @param idx  The index of the section to return.
  */
-uint8_t* mname_get_ptr( const struct mname_msg* msg_in, uint16_t idx ) {
+uint16_t mname_get_offset( const struct mname_msg* msg_in, uint16_t idx ) {
    uint8_t* ptr = (uint8_t*)msg_in;
    uint16_t search_idx = 0;
+   uint16_t offset = 0;
 
-   /* TODO: Handle multiple question fields. */
-   ptr += sizeof( struct mname_msg );
+   offset = sizeof( struct mname_msg );
 
    while( search_idx < idx ) {
       if( 0 == search_idx ) {
          /* Must be a question record. */
-         ptr += mname_get_domain_len( msg_in, idx ); /* Skip domain. */
-         ptr += 4; /* Skip type and class. */
+         offset += mname_get_domain_len( msg_in, idx ); /* Skip domain. */
+         offset += 4; /* Skip type and class. */
 
       } else if( msg_in->answers_len > search_idx ) {
          /* Must be an answer record. */
-         ptr += mname_get_domain_len( msg_in, search_idx ); /* Skip domain. */
-         ptr += 6; /* Skip type, class, and TTL. */
-         ptr += m_htons( *((uint16_t*)ptr) ); /* Skip response data. */
-         ptr += 2; /* Skip response data length. */
+         offset += mname_get_domain_len( msg_in, search_idx ); /* Skip dom. */
+         offset += 6; /* Skip type, class, and TTL. */
+         offset += m_htons( (uint16_t)ptr[offset] ); /* Skip response. */
+         offset += 2; /* Skip response data length. */
 
       } else if( msg_in->ns_len > search_idx - msg_in->answers_len ) {
          /* Must be a nameserver record. */
@@ -110,20 +110,19 @@ uint8_t* mname_get_ptr( const struct mname_msg* msg_in, uint16_t idx ) {
       search_idx++;
    }
 
-   return ptr;
+   return offset;
 }
 
-#if 0
 void mname_add_answer( struct mname_msg* msg, size_t buf_sz ) {
    size_t domain_len = 0;
-   size_t offset = 0;
+   //uint16_t offset = 0;
    uint8_t* a_ptr = (uint8_t*)msg;
    uint8_t* q_ptr = (uint8_t*)msg;
    uint16_t i = 0;
 
    domain_len = mname_get_domain_len( msg, 0 ); /* Q is always 0. */
-   a_ptr = mname_get_ptr( msg, msg->answers_len + 1 );
-   q_ptr = mname_get_ptr( msg, 0 );
+   a_ptr += mname_get_offset( msg, msg->answers_len + 1 );
+   q_ptr += mname_get_offset( msg, 0 );
 
    /* TODO: Shift everything after this answer up. */
 
@@ -135,5 +134,4 @@ void mname_add_answer( struct mname_msg* msg, size_t buf_sz ) {
 
    /* TODO: Incremenr answers_len. */
 }
-#endif
 
