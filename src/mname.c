@@ -19,7 +19,7 @@ int mname_get_domain_len( const struct mname_msg* msg_in, uint16_t idx ) {
       ptr += *ptr + 1;
    } while( 0 != *ptr );
 
-   return len_out;
+   return ++len_out;
 }
 
 int mname_get_domain(
@@ -30,7 +30,7 @@ int mname_get_domain(
    size_t buf_idx = 0;
 
    /* Grab the name into the buffer one segment at a time. */
-   ptr += sizeof( struct mname_msg );
+   ptr += mname_get_offset( msg_in, idx );
    do {
       /* Grab the name component length and move up by 2 bytes (16 bits). */
       len = *ptr;
@@ -50,26 +50,71 @@ int mname_get_domain(
    return buf_idx;
 }
 
-uint16_t mname_get_q_type( const struct mname_msg* msg_in ) {
+uint16_t mname_get_a_rdata_len( const struct mname_msg* msg_in, uint16_t idx ) {
+   uint8_t* ptr = (uint8_t*)msg_in;
+
+   /* Grab the name into the buffer one segment at a time. */
+   ptr += mname_get_offset( msg_in, idx );
+   ptr += mname_get_domain_len( msg_in, idx ); /* Skip Q domain. */
+   ptr += 12; /* Skip type, class, and TTL. */
+   
+   return m_htons( *((uint16_t*)ptr) );
+}
+
+int mname_get_a_rdata(
+   const struct mname_msg* msg_in, uint16_t idx, char* buf, size_t buf_len
+) {
+   uint8_t* ptr = (uint8_t*)msg_in;
+   uint16_t len = 0;
+   int i = 0;
+
+   /* Grab the name into the buffer one segment at a time. */
+   ptr += mname_get_offset( msg_in, idx );
+   ptr += mname_get_domain_len( msg_in, idx ); /* Skip domain. */
+   ptr += 12; /* Skip type, class, TTL, and ???. */
+   
+   //len = htons( *((uint16_t*)ptr) );
+   len = *ptr;
+   ptr += 1;
+
+   /* TODO: Buffer length check. */
+   for( i = 0 ; len > i ; i++ ) {
+      buf[i] = *(ptr++);
+   }
+
+   return i;
+}
+
+uint16_t mname_get_type( const struct mname_msg* msg_in, uint16_t idx ) {
    uint8_t* ptr = (uint8_t*)msg_in;
 
    /* Move past the header and domain. */
-   ptr += sizeof( struct mname_msg );
-   ptr += mname_get_domain_len( msg_in, 0 ); /* Q is always 0. */
-   ptr += 1; /* +1 for first byte of short. */
+   ptr += mname_get_offset( msg_in, idx );
+   ptr += mname_get_domain_len( msg_in, idx ); /* Q is always 0. */
 
    return m_htons( *((uint16_t*)ptr) );
 }
 
-uint16_t mname_get_q_class( const struct mname_msg* msg_in ) {
+uint16_t mname_get_class( const struct mname_msg* msg_in, uint16_t idx ) {
    uint8_t* ptr = (uint8_t*)msg_in;
 
    /* Move past the header and domain. */
-   ptr += sizeof( struct mname_msg );  /* Skip header. */
-   ptr += mname_get_domain_len( msg_in, 0 ); /* Skip Q domain. */
-   ptr += 3; /* Skip Q type and first byte of short. */
+   ptr += mname_get_offset( msg_in, idx );
+   ptr += mname_get_domain_len( msg_in, idx ); /* Skip Q domain. */
+   ptr += 2; /* Skip Q type and ???. */
 
    return m_htons( *((uint16_t*)ptr) );
+}
+
+uint32_t mname_get_a_ttl( const struct mname_msg* msg_in, uint16_t idx ) {
+   uint8_t* ptr = (uint8_t*)msg_in;
+
+   /* Move past the header and domain. */
+   ptr += mname_get_offset( msg_in, idx );
+   ptr += mname_get_domain_len( msg_in, idx ); /* Skip Q domain. */
+   ptr += 4; /* Skip type and class. */
+
+   return m_htonl( *((uint32_t*)ptr) );
 }
 
 /**
@@ -109,7 +154,7 @@ uint16_t mname_get_offset( const struct mname_msg* msg_in, uint16_t idx ) {
       } else {
          /* Must be an additional record. */
          offset += mname_get_domain_len( msg_in, search_idx ); /* Skip dom. */
-         offset += 6; /* Skip type, class, and TTL. */
+         offset += 8; /* Skip type, class, and TTL. */
          offset += m_htons( (uint16_t)ptr[offset] ); /* Skip response. */
          offset += 2; /* Skip response data length. */
       }

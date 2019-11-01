@@ -26,9 +26,11 @@ int main( int argc, char** argv ) {
    struct mname_msg* dns_msg = (struct mname_msg*)&buffer;
    int running = 1;
    char domain_name[NAME_BUF_LEN] = { 0 };
-   int i = 0;
+   int i = 0, j = 0;
    uint16_t size = 0;
    FILE* pkt_file = NULL;
+   uint16_t records_count = 0;
+   int rd_len = 0;
 
    memset( &server, '\0', sizeof( struct sockaddr_in ) );
    memset( &client, '\0', sizeof( struct sockaddr_in ) );
@@ -71,14 +73,11 @@ int main( int argc, char** argv ) {
       } else {
       }
 
-      memset( domain_name, '\0', NAME_BUF_LEN );
-      mname_get_domain( dns_msg, 0, domain_name, NAME_BUF_LEN );
-
-      size = mname_get_offset(
-         dns_msg, (m_htons( dns_msg->answers_len ) + 
-            m_htons( dns_msg->ns_len ) +
-            m_htons( dns_msg->addl_len ) + 2) ); /* +2 for Q and end. */
-      printf( "%ld read, %d size\n", count, size );
+      records_count = 
+         m_htons( dns_msg->questions_len ) + 
+         m_htons( dns_msg->answers_len ) + 
+         m_htons( dns_msg->ns_len ) +
+         m_htons( dns_msg->addl_len );
 
       /* Pretty header for hex dump. */
       i = 0;
@@ -95,7 +94,7 @@ int main( int argc, char** argv ) {
 
       /* Packet hex dump! */
       for( i = 0 ; count > i ; i++ ) {
-         if( 0 != i && 0 == i % 20 ) {
+         if( 0 != i && 0 == i % 21 ) {
             printf( "\n" );
          }
          
@@ -127,21 +126,42 @@ int main( int argc, char** argv ) {
       pkt_file = NULL;
 
       printf( "dns:\n cli_addr_sz: %d\n is_response(): %d\n nslen: %d\n"
-         " questions: %d\n answers: %d\n ns: %d\n additional: %d\n"
-         " domain: %s (%d)\n type: %d\n class: %d\n",
+         " questions: %d\n answers: %d\n ns: %d\n additional: %d\n",
          client_sz, m_name_is_response( dns_msg ), dns_msg->ns_len,
          m_htons( dns_msg->questions_len ),
          m_htons( dns_msg->answers_len ),
          m_htons( dns_msg->ns_len ),
-         m_htons( dns_msg->addl_len ),
-         domain_name,
-         mname_get_domain_len( dns_msg, 0 ),
-         mname_get_q_type( dns_msg ),
-         mname_get_q_class( dns_msg ) );
+         m_htons( dns_msg->addl_len ) );
 
-      assert( size == count );
-      assert( 1 == mname_get_q_class( dns_msg ) );
-      assert( 1 == mname_get_q_type( dns_msg ) );
+      /* +2 for Q and end. */
+      size = mname_get_offset( dns_msg, records_count + 2);
+      printf( "%d records, %ld read, %d size\n", records_count, count, size );
+
+      for( i = 0 ; records_count > i ; i++ ) {
+         printf( "record %d @ %d bytes:\n", i, mname_get_offset( dns_msg, i ) );
+
+         memset( domain_name, '\0', NAME_BUF_LEN );
+         mname_get_domain( dns_msg, i, domain_name, NAME_BUF_LEN );
+         printf( " domain: %s (%d)\n type: %d\n class: %d\n",
+            domain_name,
+            mname_get_domain_len( dns_msg, i ),
+            mname_get_type( dns_msg, i ),
+            mname_get_class( dns_msg, i ) );
+
+         if( 0 < i ) {
+            printf( " ttl: %d\n", mname_get_a_ttl( dns_msg, i ) );
+            rd_len = mname_get_a_rdata( dns_msg, i, buffer, NAME_BUF_LEN  );
+            printf( " rdata (%d): ", rd_len );
+            for( j = 0 ; rd_len > j ; j++ ) {
+               printf( "%02x ", buffer[j] );
+            }
+            printf( "\n" );
+         }
+      }
+
+      //assert( size == count );
+      assert( 1 == mname_get_class( dns_msg, 0 ) );
+      assert( 1 == mname_get_type( dns_msg, 0 ) );
 
       mname_response( dns_msg );
 

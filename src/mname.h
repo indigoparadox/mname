@@ -10,6 +10,13 @@
 #define m_htons( n ) (((n >> 8) & 0x00ff) | ((n << 8) & 0xff00))
 #endif /* m_htons */
 
+#ifndef m_htonl
+#define m_htonl( n ) ((((uint32_t)(n) & 0xff000000) >> 24) | \
+   (((uint32_t)(n) & 0x00ff0000) >> 8) | \
+   (((uint32_t)(n) & 0x0000ff00) << 8) | \
+   (((uint32_t)(n) & 0x000000ff) << 24))
+#endif /* m_htonl */
+
 /* TODO: Define these here in native order and use m_htons in code. */
 #define M_NAME_RESPONSE_FIELD             0x0080
 
@@ -84,8 +91,12 @@ void mname_response( struct mname_msg* msg_in );
 int mname_get_domain_len( const struct mname_msg* msg_in, uint16_t idx );
 int mname_get_domain(
    const struct mname_msg* msg_in, uint16_t idx, char* buf, size_t buf_len );
-uint16_t mname_get_q_type( const struct mname_msg* msg_in );
-uint16_t mname_get_q_class( const struct mname_msg* msg_in );
+uint16_t mname_get_a_rdata_len( const struct mname_msg* msg_in, uint16_t idx );
+int mname_get_a_rdata(
+   const struct mname_msg* msg_in, uint16_t idx, char* buf, size_t buf_len );
+uint16_t mname_get_type( const struct mname_msg* msg_in, uint16_t idx );
+uint16_t mname_get_class( const struct mname_msg* msg_in, uint16_t idx );
+uint32_t mname_get_a_ttl( const struct mname_msg* msg_in, uint16_t idx );
 uint16_t mname_get_offset( const struct mname_msg* msg_in, uint16_t idx );
 
 #endif /* MNAME_H */
