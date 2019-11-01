@@ -50,6 +50,12 @@
 #define M_NAME_TYPE_MX                    0x000f
 #define M_NAME_TYPE_NS                    0x0002
 
+#define M_NAME_WIDTH_CLASS                2
+#define M_NAME_WIDTH_TYPE                 2
+#define M_NAME_WIDTH_TTL                  4
+#define M_NAME_WIDTH_DOMAIN_SZ            1
+#define M_NAME_WIDTH_RDATA_SZ             2
+
 struct mname_msg {
    uint16_t id;
    uint16_t fields;

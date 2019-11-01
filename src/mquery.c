@@ -15,6 +15,57 @@
 #define NAME_BUF_LEN 512
 #define MSG_BUF_LEN 512
 
+void pkt_dump_display( const struct mname_msg* dns_msg, size_t sz ) {
+   int i = 0;
+   const uint8_t* buffer = (const uint8_t*)dns_msg;
+
+   /* Pretty header for hex dump. */
+   i = 0;
+   do {
+      printf( "%02d ", i++ );
+   } while( 0 != i % 20 );
+   printf( "\n" );
+
+   i = 0;
+   do {
+      printf( "-" );
+   } while( 0 != ++i % 30 );
+   printf( "\n" );
+
+   /* Packet hex dump! */
+   for( i = 0 ; sz > i ; i++ ) {
+      if( 0 != i && 0 == i % 21 ) {
+         printf( "\n" );
+      }
+      
+      /* Add some color. */
+      if( i < sizeof( struct mname_msg ) ) {
+         printf( "\033[0;31m" );
+      } else if(
+         i < sizeof( struct mname_msg ) +
+         mname_get_domain_len( dns_msg, 0 )
+      ) {
+         printf( "\033[0;33m" );
+      } else if(
+         i < mname_get_offset( dns_msg, 1 )
+      ) {
+         printf( "\033[0;34m" );
+      } else if(
+         i < mname_get_offset( dns_msg, 1 ) +
+         mname_get_domain_len( dns_msg, 1 ) +
+         M_NAME_WIDTH_TYPE + M_NAME_WIDTH_CLASS + M_NAME_WIDTH_TTL
+      ) {
+         printf( "\033[0;32m" );
+      } else {
+         printf( "\033[0;36m" );
+      }
+
+      printf( "%02hhx ", buffer[i] );
+   }
+   printf( "\033[0m" );
+   printf( "\n" );
+}
+
 int main( int argc, char** argv ) {
    int sock = 0;
    int res = 0;
@@ -79,55 +130,17 @@ int main( int argc, char** argv ) {
          m_htons( dns_msg->ns_len ) +
          m_htons( dns_msg->addl_len );
 
-      /* Pretty header for hex dump. */
-      i = 0;
-      do {
-         printf( "%02d ", i++ );
-      } while( 0 != i % 20 );
-      printf( "\n" );
+      pkt_dump_display( dns_msg, count );
 
-      i = 0;
-      do {
-         printf( "-" );
-      } while( 0 != ++i % 30 );
-      printf( "\n" );
-
-      /* Packet hex dump! */
-      for( i = 0 ; count > i ; i++ ) {
-         if( 0 != i && 0 == i % 21 ) {
-            printf( "\n" );
-         }
-         
-         /* Add some color. */
-         if( i < sizeof( struct mname_msg ) ) {
-            printf( "\033[0;31m" );
-         } else if(
-            i <= sizeof( struct mname_msg ) +
-            mname_get_domain_len( dns_msg, 0 )
-         ) {
-            printf( "\033[0;33m" );
-         } else if(
-            i <= sizeof( struct mname_msg ) +
-            mname_get_domain_len( dns_msg, 0 ) + 4
-         ) {
-            printf( "\033[0;34m" );
-         } else {
-            printf( "\033[0;36m" );
-         }
-
-         printf( "%02hhx ", buffer[i] );
-      }
-      printf( "\033[0m" );
-      printf( "\n" );
-
+      /* File dump. */
       pkt_file = fopen( "dnspkt.bin", "wb" );
       fwrite( buffer, 1, count, pkt_file );
       fclose( pkt_file );
       pkt_file = NULL;
 
-      printf( "dns:\n cli_addr_sz: %d\n is_response(): %d\n nslen: %d\n"
+      printf( "dns:\n cli_addr_sz: %d\n is_response(): %d\n "
          " questions: %d\n answers: %d\n ns: %d\n additional: %d\n",
-         client_sz, m_name_is_response( dns_msg ), dns_msg->ns_len,
+         client_sz, m_name_is_response( dns_msg ),
          m_htons( dns_msg->questions_len ),
          m_htons( dns_msg->answers_len ),
          m_htons( dns_msg->ns_len ),
@@ -141,7 +154,8 @@ int main( int argc, char** argv ) {
          printf( "record %d @ %d bytes:\n", i, mname_get_offset( dns_msg, i ) );
 
          memset( domain_name, '\0', NAME_BUF_LEN );
-         mname_get_domain( dns_msg, i, domain_name, NAME_BUF_LEN );
+         assert( mname_get_domain( dns_msg, i, domain_name, NAME_BUF_LEN ) ==
+            mname_get_domain_len( dns_msg, i ) );
          printf( " domain: %s (%d)\n type: %d\n class: %d\n",
             domain_name,
             mname_get_domain_len( dns_msg, i ),
@@ -153,13 +167,16 @@ int main( int argc, char** argv ) {
             rd_len = mname_get_a_rdata( dns_msg, i, buffer, NAME_BUF_LEN  );
             printf( " rdata (%d): ", rd_len );
             for( j = 0 ; rd_len > j ; j++ ) {
-               printf( "%02x ", buffer[j] );
+               //printf( "%02x ", buffer[j] );
             }
             printf( "\n" );
          }
       }
 
+      pkt_dump_display( dns_msg, count );
+
       //assert( size == count );
+      printf( "%d\n", mname_get_class( dns_msg, 0 ) );
       assert( 1 == mname_get_class( dns_msg, 0 ) );
       assert( 1 == mname_get_type( dns_msg, 0 ) );
 

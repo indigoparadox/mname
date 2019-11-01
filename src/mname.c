@@ -8,15 +8,15 @@ void mname_response( struct mname_msg* msg_in ) {
 }
 
 int mname_get_domain_len( const struct mname_msg* msg_in, uint16_t idx ) {
-   uint8_t* ptr = (uint8_t*)msg_in;
+   const uint8_t* ptr = (const uint8_t*)msg_in;
    int len_out = 0;
 
    ptr += mname_get_offset( msg_in, idx );
 
    /* Much quicker and simpler version of the loop from mname_get_domain(). */
    do {
-      len_out += *ptr + 1; /* +1 for sz octet. */
-      ptr += *ptr + 1;
+      len_out += *ptr + M_NAME_WIDTH_DOMAIN_SZ;
+      ptr += *ptr + M_NAME_WIDTH_DOMAIN_SZ;
    } while( 0 != *ptr );
 
    return ++len_out;
@@ -25,7 +25,7 @@ int mname_get_domain_len( const struct mname_msg* msg_in, uint16_t idx ) {
 int mname_get_domain(
    const struct mname_msg* msg_in, uint16_t idx, char* buf, size_t buf_len
 ) {
-   uint8_t* ptr = (uint8_t*)msg_in;
+   const uint8_t* ptr = (const uint8_t*)msg_in;
    uint16_t len = 0;
    size_t buf_idx = 0;
 
@@ -47,16 +47,18 @@ int mname_get_domain(
    /* Until we reach the null terminator or the buffer size. */
    } while( 0 != *ptr && buf_idx < buf_len );
 
-   return buf_idx;
+   return ++buf_idx;
 }
 
 uint16_t mname_get_a_rdata_len( const struct mname_msg* msg_in, uint16_t idx ) {
-   uint8_t* ptr = (uint8_t*)msg_in;
+   const uint8_t* ptr = (const uint8_t*)msg_in;
 
    /* Grab the name into the buffer one segment at a time. */
    ptr += mname_get_offset( msg_in, idx );
    ptr += mname_get_domain_len( msg_in, idx ); /* Skip Q domain. */
-   ptr += 12; /* Skip type, class, and TTL. */
+   ptr += M_NAME_WIDTH_TYPE +
+      M_NAME_WIDTH_CLASS +
+      M_NAME_WIDTH_TTL;
    
    return m_htons( *((uint16_t*)ptr) );
 }
@@ -64,18 +66,19 @@ uint16_t mname_get_a_rdata_len( const struct mname_msg* msg_in, uint16_t idx ) {
 int mname_get_a_rdata(
    const struct mname_msg* msg_in, uint16_t idx, char* buf, size_t buf_len
 ) {
-   uint8_t* ptr = (uint8_t*)msg_in;
+   const uint8_t* ptr = (const uint8_t*)msg_in;
    uint16_t len = 0;
    int i = 0;
 
    /* Grab the name into the buffer one segment at a time. */
    ptr += mname_get_offset( msg_in, idx );
    ptr += mname_get_domain_len( msg_in, idx ); /* Skip domain. */
-   ptr += 12; /* Skip type, class, TTL, and ???. */
+   ptr += M_NAME_WIDTH_TYPE +
+      M_NAME_WIDTH_CLASS +
+      M_NAME_WIDTH_TTL;
    
-   //len = htons( *((uint16_t*)ptr) );
-   len = *ptr;
-   ptr += 1;
+   len = m_htons( *((uint16_t*)ptr) );
+   ptr += M_NAME_WIDTH_RDATA_SZ;
 
    /* TODO: Buffer length check. */
    for( i = 0 ; len > i ; i++ ) {
@@ -86,7 +89,7 @@ int mname_get_a_rdata(
 }
 
 uint16_t mname_get_type( const struct mname_msg* msg_in, uint16_t idx ) {
-   uint8_t* ptr = (uint8_t*)msg_in;
+   const uint8_t* ptr = (const uint8_t*)msg_in;
 
    /* Move past the header and domain. */
    ptr += mname_get_offset( msg_in, idx );
@@ -96,23 +99,23 @@ uint16_t mname_get_type( const struct mname_msg* msg_in, uint16_t idx ) {
 }
 
 uint16_t mname_get_class( const struct mname_msg* msg_in, uint16_t idx ) {
-   uint8_t* ptr = (uint8_t*)msg_in;
+   const uint8_t* ptr = (const uint8_t*)msg_in;
 
    /* Move past the header and domain. */
    ptr += mname_get_offset( msg_in, idx );
    ptr += mname_get_domain_len( msg_in, idx ); /* Skip Q domain. */
-   ptr += 2; /* Skip Q type and ???. */
+   ptr += M_NAME_WIDTH_TYPE;;
 
    return m_htons( *((uint16_t*)ptr) );
 }
 
 uint32_t mname_get_a_ttl( const struct mname_msg* msg_in, uint16_t idx ) {
-   uint8_t* ptr = (uint8_t*)msg_in;
+   const uint8_t* ptr = (const uint8_t*)msg_in;
 
    /* Move past the header and domain. */
    ptr += mname_get_offset( msg_in, idx );
    ptr += mname_get_domain_len( msg_in, idx ); /* Skip Q domain. */
-   ptr += 4; /* Skip type and class. */
+   ptr += M_NAME_WIDTH_TYPE + M_NAME_WIDTH_CLASS;
 
    return m_htonl( *((uint32_t*)ptr) );
 }
@@ -123,7 +126,7 @@ uint32_t mname_get_a_ttl( const struct mname_msg* msg_in, uint16_t idx ) {
  * @param idx  The index of the section to return.
  */
 uint16_t mname_get_offset( const struct mname_msg* msg_in, uint16_t idx ) {
-   uint8_t* ptr = (uint8_t*)msg_in;
+   const uint8_t* ptr = (const uint8_t*)msg_in;
    uint16_t search_idx = 0;
    uint16_t offset = 0;
 
@@ -133,16 +136,17 @@ uint16_t mname_get_offset( const struct mname_msg* msg_in, uint16_t idx ) {
       if( 0 == search_idx ) {
          /* Must be a question record. */
 
-         offset += mname_get_domain_len( msg_in, search_idx ); /* Skip domain. */
-         offset += 4; /* Skip type and class. */
+         offset += mname_get_domain_len( msg_in, search_idx ); /* Skip dom. */
+         offset += M_NAME_WIDTH_TYPE + M_NAME_WIDTH_CLASS;
 
       } else if( m_htons( msg_in->answers_len ) > search_idx ) {
          /* Must be an answer record. */
 
          offset += mname_get_domain_len( msg_in, search_idx ); /* Skip dom. */
-         offset += 8; /* Skip type, class, and TTL. */
+         offset += 
+            M_NAME_WIDTH_TYPE + M_NAME_WIDTH_CLASS + M_NAME_WIDTH_TTL;
          offset += m_htons( (uint16_t)ptr[offset] ); /* Skip response. */
-         offset += 2; /* Skip response data length. */
+         offset += M_NAME_WIDTH_RDATA_SZ;
 
       } else if(
          m_htons( msg_in->ns_len ) >
@@ -154,9 +158,10 @@ uint16_t mname_get_offset( const struct mname_msg* msg_in, uint16_t idx ) {
       } else {
          /* Must be an additional record. */
          offset += mname_get_domain_len( msg_in, search_idx ); /* Skip dom. */
-         offset += 8; /* Skip type, class, and TTL. */
+         offset += 
+            M_NAME_WIDTH_TYPE + M_NAME_WIDTH_CLASS + M_NAME_WIDTH_TTL;
          offset += m_htons( (uint16_t)ptr[offset] ); /* Skip response. */
-         offset += 2; /* Skip response data length. */
+         offset += M_NAME_WIDTH_RDATA_SZ;
       }
 
       search_idx++;
