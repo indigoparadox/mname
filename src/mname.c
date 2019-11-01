@@ -87,24 +87,31 @@ uint16_t mname_get_offset( const struct mname_msg* msg_in, uint16_t idx ) {
    while( search_idx < idx ) {
       if( 0 == search_idx ) {
          /* Must be a question record. */
-         offset += mname_get_domain_len( msg_in, idx ); /* Skip domain. */
+
+         offset += mname_get_domain_len( msg_in, search_idx ); /* Skip domain. */
          offset += 4; /* Skip type and class. */
 
-      } else if( msg_in->answers_len > search_idx ) {
+      } else if( m_htons( msg_in->answers_len ) > search_idx ) {
          /* Must be an answer record. */
+
          offset += mname_get_domain_len( msg_in, search_idx ); /* Skip dom. */
-         offset += 6; /* Skip type, class, and TTL. */
+         offset += 8; /* Skip type, class, and TTL. */
          offset += m_htons( (uint16_t)ptr[offset] ); /* Skip response. */
          offset += 2; /* Skip response data length. */
 
-      } else if( msg_in->ns_len > search_idx - msg_in->answers_len ) {
+      } else if(
+         m_htons( msg_in->ns_len ) >
+         search_idx - m_htons( msg_in->answers_len )
+      ) {
          /* Must be a nameserver record. */
          /* TODO */
    
       } else {
          /* Must be an additional record. */
-         /* TODO */
-
+         offset += mname_get_domain_len( msg_in, search_idx ); /* Skip dom. */
+         offset += 6; /* Skip type, class, and TTL. */
+         offset += m_htons( (uint16_t)ptr[offset] ); /* Skip response. */
+         offset += 2; /* Skip response data length. */
       }
 
       search_idx++;
@@ -113,15 +120,21 @@ uint16_t mname_get_offset( const struct mname_msg* msg_in, uint16_t idx ) {
    return offset;
 }
 
+#if 0
 void mname_add_answer( struct mname_msg* msg, size_t buf_sz ) {
    size_t domain_len = 0;
    //uint16_t offset = 0;
+   uint16_t size = 0;
    uint8_t* a_ptr = (uint8_t*)msg;
    uint8_t* q_ptr = (uint8_t*)msg;
    uint16_t i = 0;
 
+   size = mname_get_offset(
+      msg, (m_htons( msg->answers_len ) + m_htons( msg->ns_len ) +
+         m_htons( msg->addl_len ) + 2) ) /* +2 for Q and end. */
+
    domain_len = mname_get_domain_len( msg, 0 ); /* Q is always 0. */
-   a_ptr += mname_get_offset( msg, msg->answers_len + 1 );
+   a_ptr += mname_get_offset( msg, m_htons( msg->answers_len ) + 1 );
    q_ptr += mname_get_offset( msg, 0 );
 
    /* TODO: Shift everything after this answer up. */
@@ -134,4 +147,5 @@ void mname_add_answer( struct mname_msg* msg, size_t buf_sz ) {
 
    /* TODO: Incremenr answers_len. */
 }
+#endif
 

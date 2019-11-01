@@ -27,6 +27,8 @@ int main( int argc, char** argv ) {
    int running = 1;
    char domain_name[NAME_BUF_LEN] = { 0 };
    int i = 0;
+   uint16_t size = 0;
+   FILE* pkt_file = NULL;
 
    memset( &server, '\0', sizeof( struct sockaddr_in ) );
    memset( &client, '\0', sizeof( struct sockaddr_in ) );
@@ -72,6 +74,12 @@ int main( int argc, char** argv ) {
       memset( domain_name, '\0', NAME_BUF_LEN );
       mname_get_domain( dns_msg, 0, domain_name, NAME_BUF_LEN );
 
+      size = mname_get_offset(
+         dns_msg, (m_htons( dns_msg->answers_len ) + 
+            m_htons( dns_msg->ns_len ) +
+            m_htons( dns_msg->addl_len ) + 2) ); /* +2 for Q and end. */
+      printf( "%ld read, %d size\n", count, size );
+
       /* Pretty header for hex dump. */
       i = 0;
       do {
@@ -113,6 +121,11 @@ int main( int argc, char** argv ) {
       printf( "\033[0m" );
       printf( "\n" );
 
+      pkt_file = fopen( "dnspkt.bin", "wb" );
+      fwrite( buffer, 1, count, pkt_file );
+      fclose( pkt_file );
+      pkt_file = NULL;
+
       printf( "dns:\n cli_addr_sz: %d\n is_response(): %d\n nslen: %d\n"
          " questions: %d\n answers: %d\n ns: %d\n additional: %d\n"
          " domain: %s (%d)\n type: %d\n class: %d\n",
@@ -126,6 +139,7 @@ int main( int argc, char** argv ) {
          mname_get_q_type( dns_msg ),
          mname_get_q_class( dns_msg ) );
 
+      assert( size == count );
       assert( 1 == mname_get_q_class( dns_msg ) );
       assert( 1 == mname_get_q_type( dns_msg ) );
 
