@@ -7,16 +7,13 @@ void mname_response( struct mname_msg* msg_in ) {
    msg_in->answers_len = m_htons( 1 );
 }
 
-int mname_get_q_domain_len( const struct mname_msg* msg_in, uint16_t idx ) {
+int mname_get_domain_len( const struct mname_msg* msg_in, uint16_t idx ) {
    uint8_t* ptr = NULL;
    int len_out = 0;
 
-   if( idx > msg_in->questions_len ) {
-      return 0;
-   }
+   ptr = mname_get_ptr( msg_in, idx );
 
-   /* Much quicker and simpler version of the loop from mname_get_q_domain(). */
-   ptr = mname_get_q_ptr( msg_in, idx );
+   /* Much quicker and simpler version of the loop from mname_get_domain(). */
    do {
       len_out += *ptr + 1; /* +1 for sz octet. */
       ptr += *ptr + 1;
@@ -25,22 +22,15 @@ int mname_get_q_domain_len( const struct mname_msg* msg_in, uint16_t idx ) {
    return len_out;
 }
 
-int mname_get_q_domain(
-   struct mname_msg* msg_in, uint16_t idx, char* buf, size_t buf_len
+int mname_get_domain(
+   const struct mname_msg* msg_in, uint16_t idx, char* buf, size_t buf_len
 ) {
    uint8_t* ptr = (uint8_t*)msg_in;
    uint16_t len = 0;
    size_t buf_idx = 0;
 
-   if( idx > msg_in->questions_len ) {
-      return 0;
-   }
-
-   /* TODO: Move to the requested index. */
-
-   ptr += sizeof( struct mname_msg );
-
    /* Grab the name into the buffer one segment at a time. */
+   ptr += sizeof( struct mname_msg );
    do {
       /* Grab the name component length and move up by 2 bytes (16 bits). */
       len = *ptr;
@@ -60,71 +50,80 @@ int mname_get_q_domain(
    return buf_idx;
 }
 
-uint16_t mname_get_q_type( const struct mname_msg* msg_in, uint16_t idx ) {
+uint16_t mname_get_q_type( const struct mname_msg* msg_in ) {
    uint8_t* ptr = (uint8_t*)msg_in;
 
-   if( idx > msg_in->questions_len ) {
-      return 0;
-   }
-
-   /* TODO: Move to the requested index. */
-
+   /* Move past the header and domain. */
    ptr += sizeof( struct mname_msg );
-   ptr += mname_get_q_domain_len( msg_in, idx ); /* +1 for terminator. */
-   ptr += 1;
+   ptr += mname_get_domain_len( msg_in, 0 ); /* Q is always 0. */
+   ptr += 1; /* +1 for first byte of short. */
 
    return m_htons( *((uint16_t*)ptr) );
 }
 
-uint16_t mname_get_q_class( const struct mname_msg* msg_in, uint16_t idx ) {
+uint16_t mname_get_q_class( const struct mname_msg* msg_in ) {
    uint8_t* ptr = (uint8_t*)msg_in;
 
-   if( idx > msg_in->questions_len ) {
-      return 0;
-   }
-
-   /* TODO: Move to the requested index. */
-
+   /* Move past the header and domain. */
    ptr += sizeof( struct mname_msg );  /* Skip header. */
-   ptr += mname_get_q_domain_len( msg_in, idx ); /* Skip Q domain. */
-   ptr += 3; /* Skip Q type. */
+   ptr += mname_get_domain_len( msg_in, 0 ); /* Skip Q domain. */
+   ptr += 3; /* Skip Q type and first byte of short. */
 
    return m_htons( *((uint16_t*)ptr) );
 }
 
 /**
- * \brief   Get a pointer to an answer section.
+ * \brief   Get a pointer to a record. Determine the record based on count
+ *          fields in header and reasoning.
  * @param idx  The index of the section to return.
  */
-uint8_t* mname_get_a_ptr( const struct mname_msg* msg_in, uint16_t idx ) {
+uint8_t* mname_get_ptr( const struct mname_msg* msg_in, uint16_t idx ) {
    uint8_t* ptr = (uint8_t*)msg_in;
+   uint16_t search_idx = 0;
 
    /* TODO: Handle multiple question fields. */
    ptr += sizeof( struct mname_msg );
-   ptr += mname_get_q_domain_len( msg_in, idx ) + 1;
 
-   /* TODO */
+   while( search_idx < idx ) {
+      if( 0 == search_idx ) {
+         /* Must be a question record. */
+         ptr += mname_get_domain_len( msg_in, idx ); /* Skip domain. */
+         ptr += 4; /* Skip type and class. */
 
-   return NULL;
+      } else if( msg_in->answers_len > search_idx ) {
+         /* Must be an answer record. */
+         ptr += mname_get_domain_len( msg_in, search_idx ); /* Skip domain. */
+         ptr += 6; /* Skip type, class, and TTL. */
+         ptr += m_htons( *((uint16_t*)ptr) ); /* Skip response data. */
+         ptr += 2; /* Skip response data length. */
+
+      } else if( msg_in->ns_len > search_idx - msg_in->answers_len ) {
+         /* Must be a nameserver record. */
+         /* TODO */
+   
+      } else {
+         /* Must be an additional record. */
+         /* TODO */
+
+      }
+
+      search_idx++;
+   }
+
+   return ptr;
 }
 
-uint8_t* mname_get_q_ptr( const struct mname_msg* msg_in, uint16_t idx ) {
-   uint8_t* ptr = (uint8_t*)msg_in;
-
-   ptr += sizeof( struct mname_msg );
-
-   return NULL;
-}
-
-void mname_add_answer( struct mname_msg* msg, uint16_t q_idx, size_t buf_sz ) {
+#if 0
+void mname_add_answer( struct mname_msg* msg, size_t buf_sz ) {
    size_t domain_len = 0;
    size_t offset = 0;
    uint8_t* a_ptr = (uint8_t*)msg;
    uint8_t* q_ptr = (uint8_t*)msg;
+   uint16_t i = 0;
 
-   domain_len = mname_get_q_domain_len( msg, idx );
-   a_ptr = mname_get_a_ptr( msg, msg->answers_len );
-   q_ptr = mname_get_q_ptr( msg, q_idx );
+   domain_len = mname_get_domain_len( msg, 0 ); /* Q is always 0. */
+   a_ptr = mname_get_ptr( msg, msg->answers_len + 1 );
+   q_ptr = mname_get_ptr( msg, 0 );
 
    /* TODO: Shift everything after this answer up. */
 
@@ -136,4 +135,5 @@ void mname_add_answer( struct mname_msg* msg, uint16_t q_idx, size_t buf_sz ) {
 
    /* TODO: Incremenr answers_len. */
 }
+#endif
 

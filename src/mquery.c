@@ -70,7 +70,7 @@ int main( int argc, char** argv ) {
       }
 
       memset( domain_name, '\0', NAME_BUF_LEN );
-      mname_get_q_domain( dns_msg, 0, domain_name, NAME_BUF_LEN );
+      mname_get_domain( dns_msg, 0, domain_name, NAME_BUF_LEN );
 
       /* Pretty header for hex dump. */
       i = 0;
@@ -96,12 +96,12 @@ int main( int argc, char** argv ) {
             printf( "\033[0;31m" );
          } else if(
             i <= sizeof( struct mname_msg ) +
-            mname_get_q_domain_len( dns_msg, 0 )
+            mname_get_domain_len( dns_msg, 0 )
          ) {
             printf( "\033[0;33m" );
          } else if(
             i <= sizeof( struct mname_msg ) +
-            mname_get_q_domain_len( dns_msg, 0 ) + 4
+            mname_get_domain_len( dns_msg, 0 ) + 4
          ) {
             printf( "\033[0;34m" );
          } else {
@@ -122,12 +122,12 @@ int main( int argc, char** argv ) {
          m_htons( dns_msg->ns_len ),
          m_htons( dns_msg->addl_len ),
          domain_name,
-         mname_get_q_domain_len( dns_msg, 0 ),
-         mname_get_q_type( dns_msg, 0 ),
-         mname_get_q_class( dns_msg, 0 ) );
+         mname_get_domain_len( dns_msg, 0 ),
+         mname_get_q_type( dns_msg ),
+         mname_get_q_class( dns_msg ) );
 
-      assert( 1 == mname_get_q_class( dns_msg, 0 ) );
-      assert( 1 == mname_get_q_type( dns_msg, 0 ) );
+      assert( 1 == mname_get_q_class( dns_msg ) );
+      assert( 1 == mname_get_q_type( dns_msg ) );
 
       mname_response( dns_msg );
 
