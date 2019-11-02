@@ -35,38 +35,52 @@ START_TEST( test_m_htonl ) {
 }
 END_TEST
 
+START_TEST( test_q_domain_len ) {
+   ck_assert_int_eq( 12, mname_get_domain_len( dns_pkt, PKT_BUF_SZ, 0 ) );
+}
+END_TEST
+
+START_TEST( test_q_domain ) {
+   char domain[NAME_BUF_SZ] = { 0 };
+   int len = 0;
+   len = mname_get_domain( dns_pkt, PKT_BUF_SZ, 0, domain, NAME_BUF_SZ );
+   ck_assert_str_eq( domain, "google.com." );
+   ck_assert_int_eq( len, 12 );
+}
+END_TEST
+
 START_TEST( test_q_class ) {
-   ck_assert_int_eq( 1, mname_get_class( dns_pkt, 0 ) );
+   ck_assert_int_eq( 1, mname_get_class( dns_pkt, PKT_BUF_SZ, 0 ) );
 }
 END_TEST
 
 START_TEST( test_q_type ) {
-   ck_assert_int_eq( 1, mname_get_type( dns_pkt, 0 ) );
+   ck_assert_int_eq( 1, mname_get_type( dns_pkt, PKT_BUF_SZ, 0 ) );
 }
 END_TEST
 
 START_TEST( test_a_class ) {
-   ck_assert_int_eq( 4096, mname_get_class( dns_pkt, 1 ) );
+   ck_assert_int_eq( 4096, mname_get_class( dns_pkt, PKT_BUF_SZ, 1 ) );
 }
 END_TEST
 
 START_TEST( test_a_type ) {
-   ck_assert_int_eq( 41, mname_get_type( dns_pkt, 1 ) );
+   ck_assert_int_eq( 41, mname_get_type( dns_pkt, PKT_BUF_SZ, 1 ) );
 }
 END_TEST
 
 START_TEST( test_a_ttl ) {
-   ck_assert_int_eq( 0, mname_get_a_ttl( dns_pkt, 1 ) );
+   ck_assert_int_eq( 0, mname_get_a_ttl( dns_pkt, PKT_BUF_SZ, 1 ) );
 }
 END_TEST
 
 START_TEST( test_a_rdata_len ) {
-   ck_assert_int_eq( 12, mname_get_a_rdata_len( dns_pkt, 1 ) );
+   ck_assert_int_eq( 12, mname_get_a_rdata_len( dns_pkt, PKT_BUF_SZ, 1 ) );
 }
 END_TEST
 
 START_TEST( test_sz ) {
-   ck_assert_int_eq( PKT_LEN, mname_get_offset( dns_pkt, 2 ) );
+   ck_assert_int_eq( PKT_LEN, mname_get_offset( dns_pkt, PKT_BUF_SZ, 2 ) );
 }
 END_TEST
 
@@ -81,6 +95,8 @@ Suite* mname_suite( void ) {
 
    tcase_add_test( tc_respond, test_m_htons );
    tcase_add_test( tc_respond, test_m_htonl );
+   tcase_add_test( tc_respond, test_q_domain_len );
+   tcase_add_test( tc_respond, test_q_domain );
    tcase_add_test( tc_respond, test_q_type );
    tcase_add_test( tc_respond, test_q_class );
    tcase_add_test( tc_respond, test_a_type );
