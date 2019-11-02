@@ -40,23 +40,39 @@ void pkt_dump_display( const struct mname_msg* dns_msg, size_t sz ) {
       
       /* Add some color. */
       if( i < sizeof( struct mname_msg ) ) {
+         /* Header */
          printf( "\033[0;31m" );
+
       } else if(
          i < sizeof( struct mname_msg ) +
          mname_get_domain_len( dns_msg, 0 )
       ) {
+         /* Question Domain */
          printf( "\033[0;33m" );
+
       } else if(
          i < mname_get_offset( dns_msg, 1 )
       ) {
+         /* Question Fields */
          printf( "\033[0;34m" );
+
+      } else if(
+         i < mname_get_offset( dns_msg, 1 ) +
+         mname_get_domain_len( dns_msg, 1 )
+      ) {
+         /* Answer/Addl Domain */
+         printf( "\033[0;33m" );
+
       } else if(
          i < mname_get_offset( dns_msg, 1 ) +
          mname_get_domain_len( dns_msg, 1 ) +
          M_NAME_WIDTH_TYPE + M_NAME_WIDTH_CLASS + M_NAME_WIDTH_TTL
       ) {
+         /* Answer/Addl Fields */
          printf( "\033[0;32m" );
+
       } else {
+         /* ??? */
          printf( "\033[0;36m" );
       }
 
@@ -66,20 +82,37 @@ void pkt_dump_display( const struct mname_msg* dns_msg, size_t sz ) {
    printf( "\n" );
 }
 
+void pkt_dump_file( const char* name, const uint8_t* buffer, size_t sz ) {
+   FILE* pkt_file = NULL;
+
+   /* File dump. */
+   pkt_file = fopen( name, "wb" );
+   if( NULL == pkt_file ) {
+      fprintf( stderr, "fopen(): %s\n", strerror( errno ) );
+      goto cleanup;
+   }
+
+   fwrite( buffer, 1, sz, pkt_file );
+
+cleanup:
+   if( NULL != pkt_file ) {
+      fclose( pkt_file );
+   }
+}
+
 int main( int argc, char** argv ) {
    int sock = 0;
    int res = 0;
    struct sockaddr_in server;
    struct sockaddr_storage client;
-   char buffer[MSG_BUF_LEN] = { 0 };
+   uint8_t pkt_buf[MSG_BUF_LEN] = { 0 };
    ssize_t count = 0;
    socklen_t client_sz = sizeof( struct sockaddr_storage );
-   struct mname_msg* dns_msg = (struct mname_msg*)&buffer;
+   struct mname_msg* dns_msg = (struct mname_msg*)&pkt_buf;
    int running = 1;
    char domain_name[NAME_BUF_LEN] = { 0 };
    int i = 0, j = 0;
    uint16_t size = 0;
-   FILE* pkt_file = NULL;
    uint16_t records_count = 0;
    int rd_len = 0;
 
@@ -107,7 +140,7 @@ int main( int argc, char** argv ) {
    while( running ) {
 
       /* Listen for incoming packets. */
-      count = recvfrom( sock, buffer, sizeof( buffer ), 0,
+      count = recvfrom( sock, pkt_buf, MSG_BUF_LEN, 0,
          (struct sockaddr*)&client, &client_sz );
       if( 0 > count ) {
          fprintf( stderr, "recvfrom(): %s\n", strerror( errno ) );
@@ -118,7 +151,7 @@ int main( int argc, char** argv ) {
       if( 0 > count ) {
          fprintf( stderr, "%s\n", strerror( errno ) );
          goto cleanup;
-      } else if( sizeof( buffer ) == count ) {
+      } else if( sizeof( pkt_buf ) == count ) {
          fprintf( stderr, "datagram too large; truncated to: %ld\n", count );
          goto cleanup;
       } else {
@@ -131,12 +164,7 @@ int main( int argc, char** argv ) {
          m_htons( dns_msg->addl_len );
 
       pkt_dump_display( dns_msg, count );
-
-      /* File dump. */
-      pkt_file = fopen( "dnspkt.bin", "wb" );
-      fwrite( buffer, 1, count, pkt_file );
-      fclose( pkt_file );
-      pkt_file = NULL;
+      pkt_dump_file( "dnspkt.bin", pkt_buf, count );
 
       printf( "dns:\n cli_addr_sz: %d\n is_response(): %d\n "
          " questions: %d\n answers: %d\n ns: %d\n additional: %d\n",
@@ -164,7 +192,7 @@ int main( int argc, char** argv ) {
 
          if( 0 < i ) {
             printf( " ttl: %d\n", mname_get_a_ttl( dns_msg, i ) );
-            rd_len = mname_get_a_rdata( dns_msg, i, buffer, NAME_BUF_LEN  );
+            //rd_len = mname_get_a_rdata( dns_msg, i, pkt_buf, NAME_BUF_LEN  );
             printf( " rdata (%d): ", rd_len );
             for( j = 0 ; rd_len > j ; j++ ) {
                //printf( "%02x ", buffer[j] );
@@ -183,7 +211,7 @@ int main( int argc, char** argv ) {
       mname_response( dns_msg );
 
       /* Send response back to requester. */
-      count = sendto( sock, buffer, count, 0,
+      count = sendto( sock, pkt_buf, count, 0,
          (struct sockaddr*)&client, client_sz );
       if( 0 > count ) {
          fprintf( stderr, "sendto(): %s\n", strerror( errno ) );

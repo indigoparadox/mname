@@ -49,6 +49,7 @@
 #define M_NAME_TYPE_A                     0x0001
 #define M_NAME_TYPE_MX                    0x000f
 #define M_NAME_TYPE_NS                    0x0002
+#define M_NAME_TYPE_OPT                   0x0041
 
 #define M_NAME_WIDTH_CLASS                2
 #define M_NAME_WIDTH_TYPE                 2
@@ -93,16 +94,42 @@ struct mname_answer {
 #define m_name_is_recursion_avail( pkt ) \
    ((pkt->fields) & M_NAME_RECURSE_AVAIL_FIELD)
 
+#define _mname_cast_ptr_to_bytes( ptr ) \
+   ((uint8_t*)ptr)
+
+#define _mname_cast_ptr_to_short( ptr ) \
+   ((uint16_t*)ptr)
+
+#define _mname_cast_ptr_to_long( ptr ) \
+   ((uint32_t*)(ptr))
+
+#define mname_get_type( msg_in, idx ) \
+   m_htons( *(_mname_cast_ptr_to_short( \
+      (_mname_cast_ptr_to_bytes( msg_in ) + \
+         mname_get_offset( msg_in, idx ) + \
+         mname_get_domain_len( msg_in, idx ) ))) )
+
+#define mname_get_class( msg_in, idx ) \
+   m_htons( *(_mname_cast_ptr_to_short( \
+      (_mname_cast_ptr_to_bytes( msg_in ) + \
+         mname_get_offset( msg_in, idx ) + \
+         mname_get_domain_len( msg_in, idx ) + \
+         M_NAME_WIDTH_TYPE))) )
+
+#define mname_get_a_ttl( msg_in, idx ) \
+   m_htonl( *(_mname_cast_ptr_to_long( \
+      (_mname_cast_ptr_to_bytes( msg_in ) + \
+         mname_get_offset( msg_in, idx ) + \
+         mname_get_domain_len( msg_in, idx ) + \
+         M_NAME_WIDTH_TYPE + M_NAME_WIDTH_CLASS))) )
+
 void mname_response( struct mname_msg* msg_in );
 int mname_get_domain_len( const struct mname_msg* msg_in, uint16_t idx );
 int mname_get_domain(
    const struct mname_msg* msg_in, uint16_t idx, char* buf, size_t buf_len );
 uint16_t mname_get_a_rdata_len( const struct mname_msg* msg_in, uint16_t idx );
 int mname_get_a_rdata(
-   const struct mname_msg* msg_in, uint16_t idx, char* buf, size_t buf_len );
-uint16_t mname_get_type( const struct mname_msg* msg_in, uint16_t idx );
-uint16_t mname_get_class( const struct mname_msg* msg_in, uint16_t idx );
-uint32_t mname_get_a_ttl( const struct mname_msg* msg_in, uint16_t idx );
+   const struct mname_msg* msg_in, uint16_t idx, uint8_t* buf, size_t buf_len );
 uint16_t mname_get_offset( const struct mname_msg* msg_in, uint16_t idx );
 
 #endif /* MNAME_H */
