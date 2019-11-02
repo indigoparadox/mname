@@ -29,7 +29,7 @@ $(BINDIR_MSP430G2553)/libmname.a: CFLAGS += \
 
 test_mname: LDFLAGS += $(shell pkg-config --libs check) -L../bin/linux/ -lmname
 test_mname: CFLAGS += -DCHECK -g -Wall -Werror
-test_mname: OBJDIR := ../obj/test_mname
+test_mname: OBJDIR := $(OBJDIR_TESTS)
 
 mquery: LDFLAGS += -L../bin/linux/ -lmname
 mquery: CFLAGS += -g -Wall -Werror
