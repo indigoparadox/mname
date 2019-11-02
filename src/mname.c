@@ -69,7 +69,7 @@ uint16_t mname_get_a_rdata_len( const struct mname_msg* msg_in, uint16_t idx ) {
    ptr += M_NAME_WIDTH_TYPE +
       M_NAME_WIDTH_CLASS +
       M_NAME_WIDTH_TTL;
-   
+
    return m_htons( *((uint16_t*)ptr) );
 }
 
@@ -86,7 +86,7 @@ int mname_get_a_rdata(
    ptr += M_NAME_WIDTH_TYPE +
       M_NAME_WIDTH_CLASS +
       M_NAME_WIDTH_TTL;
-   
+
    len = m_htons( *((uint16_t*)ptr) );
    ptr += M_NAME_WIDTH_RDATA_SZ;
 
@@ -104,7 +104,7 @@ int mname_get_a_rdata(
  * @param idx  The index of the section to return.
  */
 uint16_t mname_get_offset( const struct mname_msg* msg_in, uint16_t idx ) {
-   const uint8_t* ptr = (const uint8_t*)msg_in;
+   //const uint8_t* ptr = (const uint8_t*)msg_in;
    uint16_t search_idx = 0;
    uint16_t offset = 0;
 
@@ -121,11 +121,9 @@ uint16_t mname_get_offset( const struct mname_msg* msg_in, uint16_t idx ) {
          /* Must be an answer record. */
 
          offset += mname_get_domain_len( msg_in, search_idx ); /* Skip dom. */
-         //if( 0x41 == 
-         // XXX
          offset += 
             M_NAME_WIDTH_TYPE + M_NAME_WIDTH_CLASS + M_NAME_WIDTH_TTL;
-         offset += m_htons( (uint16_t)ptr[offset] ); /* Skip response. */
+         //offset += m_htons( (uint16_t)ptr[offset] ); /* Skip response. */
          offset += M_NAME_WIDTH_RDATA_SZ;
 
       } else if(
@@ -140,8 +138,9 @@ uint16_t mname_get_offset( const struct mname_msg* msg_in, uint16_t idx ) {
          offset += mname_get_domain_len( msg_in, search_idx ); /* Skip dom. */
          offset += 
             M_NAME_WIDTH_TYPE + M_NAME_WIDTH_CLASS + M_NAME_WIDTH_TTL;
-         offset += m_htons( (uint16_t)ptr[offset] ); /* Skip response. */
-         offset += M_NAME_WIDTH_RDATA_SZ;
+         offset = 42;
+         offset += *(_mname_cast_ptr_to_short(
+            _mname_cast_ptr_to_bytes( msg_in ) + offset ) );
       }
 
       search_idx++;

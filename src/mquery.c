@@ -19,6 +19,8 @@ void pkt_dump_display( const struct mname_msg* dns_msg, size_t sz ) {
    int i = 0;
    const uint8_t* buffer = (const uint8_t*)dns_msg;
 
+   printf( "\n" );
+
    /* Pretty header for hex dump. */
    i = 0;
    do {
@@ -26,6 +28,7 @@ void pkt_dump_display( const struct mname_msg* dns_msg, size_t sz ) {
    } while( 0 != i % 20 );
    printf( "\n" );
 
+   /* Dividing border. */
    i = 0;
    do {
       printf( "-" );
@@ -79,7 +82,8 @@ void pkt_dump_display( const struct mname_msg* dns_msg, size_t sz ) {
       printf( "%02hhx ", buffer[i] );
    }
    printf( "\033[0m" );
-   printf( "\n" );
+   printf( "\n\n" );
+
 }
 
 void pkt_dump_file( const char* name, const uint8_t* buffer, size_t sz ) {
@@ -100,6 +104,95 @@ cleanup:
    }
 }
 
+void pkt_summarize( const uint8_t* pkt_buf, size_t count ) {
+   uint16_t records_count = 0;
+   int rd_len = 0;
+   char domain_name[NAME_BUF_LEN] = { 0 };
+   int i = 0, j = 0;
+   struct mname_msg* dns_msg = (struct mname_msg*)pkt_buf;
+   uint8_t rdata_buf[MSG_BUF_LEN] = { 0 };
+   uint16_t size = 0;
+
+   /* Handle incoming packets. */
+   if( 0 > count ) {
+      fprintf( stderr, "%s\n", strerror( errno ) );
+      goto cleanup;
+   } else if( sizeof( pkt_buf ) == count ) {
+      fprintf( stderr, "datagram too large; truncated to: %ld\n", count );
+      goto cleanup;
+   } else {
+   }
+
+   records_count = 
+      m_htons( dns_msg->questions_len ) + 
+      m_htons( dns_msg->answers_len ) + 
+      m_htons( dns_msg->ns_len ) +
+      m_htons( dns_msg->addl_len );
+
+   pkt_dump_display( dns_msg, count );
+   pkt_dump_file( "dnspkt.bin", pkt_buf, count );
+
+   printf( "dns:\n is_response(): %d\n "
+      " questions: %d\n answers: %d\n ns: %d\n additional: %d\n",
+      m_name_is_response( dns_msg ),
+      m_htons( dns_msg->questions_len ),
+      m_htons( dns_msg->answers_len ),
+      m_htons( dns_msg->ns_len ),
+      m_htons( dns_msg->addl_len ) );
+
+   /* +2 for Q and end. */
+   size = mname_get_offset( dns_msg, records_count + 2);
+   printf( "%d records, %ld read, %d size\n", records_count, count, size );
+
+   for( i = 0 ; records_count > i ; i++ ) {
+      printf( "record %d @ %d bytes:\n", i, mname_get_offset( dns_msg, i ) );
+
+      memset( domain_name, '\0', NAME_BUF_LEN );
+      assert( mname_get_domain( dns_msg, i, domain_name, NAME_BUF_LEN ) ==
+         mname_get_domain_len( dns_msg, i ) );
+      printf( " domain: %s (%d)\n type: %d\n class: %d\n",
+         domain_name,
+         mname_get_domain_len( dns_msg, i ),
+         mname_get_type( dns_msg, i ),
+         mname_get_class( dns_msg, i ) );
+
+      if( 0 < i ) {
+         /* Answer/Addl Record. */
+         printf( " ttl: %d\n", mname_get_a_ttl( dns_msg, i ) );
+         memset( rdata_buf, '\0', MSG_BUF_LEN );
+         mname_get_a_rdata( dns_msg, i, rdata_buf, MSG_BUF_LEN );
+         rd_len = mname_get_a_rdata_len( dns_msg, i  );
+         printf( " rdata (%d): ", rd_len );
+         for( j = 0 ; rd_len > j ; j++ ) {
+            printf( "%02hhx ", rdata_buf[j] );
+         }
+         printf( "\n" );
+      }
+   }
+
+   pkt_dump_display( dns_msg, count );
+
+// DEBUG
+   size = 37;
+   size += *(_mname_cast_ptr_to_short(
+      _mname_cast_ptr_to_bytes( dns_msg ) + size ) );
+// DEBUG
+   printf( "(%d): %02hhx %02hhx\n", size, pkt_buf[size], pkt_buf[size + 1] );
+   fflush( 0 );
+   assert( 0 != pkt_buf[size] );
+   printf( "after pkt: " );
+   for( i = size ; MSG_BUF_LEN > i ; i++ ) {
+      printf( "%02hhx ", pkt_buf[i] );
+      fflush( 0 );
+      assert( 0 == pkt_buf[i] );
+   }
+   printf( "\n" );
+
+cleanup:
+
+   return;
+}
+
 int main( int argc, char** argv ) {
    int sock = 0;
    int res = 0;
@@ -110,11 +203,6 @@ int main( int argc, char** argv ) {
    socklen_t client_sz = sizeof( struct sockaddr_storage );
    struct mname_msg* dns_msg = (struct mname_msg*)&pkt_buf;
    int running = 1;
-   char domain_name[NAME_BUF_LEN] = { 0 };
-   int i = 0, j = 0;
-   uint16_t size = 0;
-   uint16_t records_count = 0;
-   int rd_len = 0;
 
    memset( &server, '\0', sizeof( struct sockaddr_in ) );
    memset( &client, '\0', sizeof( struct sockaddr_in ) );
@@ -147,64 +235,8 @@ int main( int argc, char** argv ) {
          goto cleanup;
       }
 
-      /* Handle incoming packets. */
-      if( 0 > count ) {
-         fprintf( stderr, "%s\n", strerror( errno ) );
-         goto cleanup;
-      } else if( sizeof( pkt_buf ) == count ) {
-         fprintf( stderr, "datagram too large; truncated to: %ld\n", count );
-         goto cleanup;
-      } else {
-      }
+      pkt_summarize( pkt_buf, count );
 
-      records_count = 
-         m_htons( dns_msg->questions_len ) + 
-         m_htons( dns_msg->answers_len ) + 
-         m_htons( dns_msg->ns_len ) +
-         m_htons( dns_msg->addl_len );
-
-      pkt_dump_display( dns_msg, count );
-      pkt_dump_file( "dnspkt.bin", pkt_buf, count );
-
-      printf( "dns:\n cli_addr_sz: %d\n is_response(): %d\n "
-         " questions: %d\n answers: %d\n ns: %d\n additional: %d\n",
-         client_sz, m_name_is_response( dns_msg ),
-         m_htons( dns_msg->questions_len ),
-         m_htons( dns_msg->answers_len ),
-         m_htons( dns_msg->ns_len ),
-         m_htons( dns_msg->addl_len ) );
-
-      /* +2 for Q and end. */
-      size = mname_get_offset( dns_msg, records_count + 2);
-      printf( "%d records, %ld read, %d size\n", records_count, count, size );
-
-      for( i = 0 ; records_count > i ; i++ ) {
-         printf( "record %d @ %d bytes:\n", i, mname_get_offset( dns_msg, i ) );
-
-         memset( domain_name, '\0', NAME_BUF_LEN );
-         assert( mname_get_domain( dns_msg, i, domain_name, NAME_BUF_LEN ) ==
-            mname_get_domain_len( dns_msg, i ) );
-         printf( " domain: %s (%d)\n type: %d\n class: %d\n",
-            domain_name,
-            mname_get_domain_len( dns_msg, i ),
-            mname_get_type( dns_msg, i ),
-            mname_get_class( dns_msg, i ) );
-
-         if( 0 < i ) {
-            printf( " ttl: %d\n", mname_get_a_ttl( dns_msg, i ) );
-            //rd_len = mname_get_a_rdata( dns_msg, i, pkt_buf, NAME_BUF_LEN  );
-            printf( " rdata (%d): ", rd_len );
-            for( j = 0 ; rd_len > j ; j++ ) {
-               //printf( "%02x ", buffer[j] );
-            }
-            printf( "\n" );
-         }
-      }
-
-      pkt_dump_display( dns_msg, count );
-
-      //assert( size == count );
-      printf( "%d\n", mname_get_class( dns_msg, 0 ) );
       assert( 1 == mname_get_class( dns_msg, 0 ) );
       assert( 1 == mname_get_type( dns_msg, 0 ) );
 
