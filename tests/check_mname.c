@@ -80,7 +80,7 @@ START_TEST( test_a_rdata_len ) {
 END_TEST
 
 START_TEST( test_sz ) {
-   ck_assert_int_eq( PKT_LEN, mname_get_offset( dns_pkt, PKT_BUF_SZ, 2 ) );
+   ck_assert_int_eq( PKT_LEN, mname_get_msg_len( dns_pkt, PKT_BUF_SZ ) );
 }
 END_TEST
 

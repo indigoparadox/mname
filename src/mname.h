@@ -60,10 +60,10 @@
 struct mname_msg {
    uint16_t id;
    uint16_t fields;
-   uint16_t questions_len;
-   uint16_t answers_len;
-   uint16_t ns_len;
-   uint16_t addl_len;
+   uint16_t q_count;
+   uint16_t a_count;
+   uint16_t n_count;
+   uint16_t l_count;
 } __attribute__( (packed) );
 
 /*
@@ -103,6 +103,10 @@ struct mname_answer {
 #define _mname_cast_ptr_to_long( ptr ) \
    ((uint32_t*)(ptr))
 
+#define mname_get_records_count( msg_in ) \
+   (m_htons( msg_in->q_count ) + m_htons( msg_in->a_count ) + \
+      m_htons( msg_in->n_count ) + m_htons( msg_in->l_count ) )
+
 #define mname_get_type( msg_in, msg_buf_sz, idx ) \
    m_htons( *(_mname_cast_ptr_to_short( \
       (_mname_cast_ptr_to_bytes( msg_in ) + \
@@ -123,18 +127,21 @@ struct mname_answer {
          mname_get_domain_len( msg_in, msg_buf_sz, idx ) + \
          M_NAME_WIDTH_TYPE + M_NAME_WIDTH_CLASS))) )
 
-void mname_response( struct mname_msg* msg_in, size_t msg_buf_len );
+#define mname_get_msg_len( msg_in, msg_buf_sz ) \
+   mname_get_offset( msg_in, msg_buf_sz, mname_get_records_count( msg_in ) )
+
+void mname_response( struct mname_msg* msg_in, size_t msg_buf_sz );
 int mname_get_domain_len(
-   const struct mname_msg* msg_in, size_t msg_buf_len, uint16_t idx );
+   const struct mname_msg* msg_in, size_t msg_buf_sz, uint16_t idx );
 int mname_get_domain(
-   const struct mname_msg* msg_in, size_t msg_buf_len, uint16_t idx,
+   const struct mname_msg* msg_in, size_t msg_buf_sz, uint16_t idx,
    char* buf, size_t buf_len );
 int mname_get_a_rdata_len(
-   const struct mname_msg* msg_in, size_t msg_buf_len, uint16_t idx );
+   const struct mname_msg* msg_in, size_t msg_buf_sz, uint16_t idx );
 int mname_get_a_rdata(
-   const struct mname_msg* msg_in, size_t msg_buf_len,  uint16_t idx,
+   const struct mname_msg* msg_in, size_t msg_buf_sz,  uint16_t idx,
    uint8_t* buf, size_t buf_len );
-int mname_get_offset( const struct mname_msg* msg_in, size_t msg_buf_len,
+int mname_get_offset( const struct mname_msg* msg_in, size_t msg_buf_sz,
    uint16_t idx );
 
 #endif /* MNAME_H */

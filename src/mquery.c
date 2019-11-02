@@ -14,8 +14,20 @@
 
 #define NAME_BUF_LEN 512
 #define MSG_BUF_LEN 512
+//#define
 
-void pkt_dump_display( const struct mname_msg* dns_msg, size_t sz ) {
+struct pkt_dump_highlight {
+   uint16_t offset;
+   char ansi[6];
+};
+
+void pkt_dump_setup() {
+
+}
+
+void pkt_dump_display(
+   const struct mname_msg* dns_msg, size_t sz
+) {
    int i = 0;
    const uint8_t* buffer = (const uint8_t*)dns_msg;
 
