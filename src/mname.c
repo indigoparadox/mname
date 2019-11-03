@@ -22,7 +22,7 @@ int mname_get_domain_len(
       msg_offset += ptr[msg_offset] + M_NAME_WIDTH_DOMAIN_SZ;
 
       /* Garbage data emergency brake. */
-      if( len_out >= msg_buf_sz ) {
+      if( len_out > msg_buf_sz ) {
          return -1;
       }
    } while( 0 != ptr[msg_offset] );
@@ -58,7 +58,7 @@ int mname_get_domain(
          segment_len--; /* 1 less to go. */
 
          /* Garbage data emergency brake. */
-         if( msg_offset >= buf_sz ) {
+         if( msg_offset > buf_sz ) {
             return -1;
          }
       }
@@ -99,25 +99,28 @@ int mname_get_a_rdata(
    const uint8_t* ptr = (const uint8_t*)msg_in;
    uint16_t len = 0;
    int i = 0;
-
-   /* TODO: Check for exceeding msg buffer. */
+   int offset = 0;
 
    /* Grab the name into the buffer one segment at a time. */
-   ptr += mname_get_offset( msg_in, msg_buf_sz, idx );
-   ptr += mname_get_domain_len( msg_in, msg_buf_sz, idx ); /* Skip domain. */
-   ptr += M_NAME_WIDTH_TYPE +
+   offset += mname_get_offset( msg_in, msg_buf_sz, idx );
+   offset += mname_get_domain_len( msg_in, msg_buf_sz, idx ); /* Skip domain. */
+   offset += M_NAME_WIDTH_TYPE +
       M_NAME_WIDTH_CLASS +
       M_NAME_WIDTH_TTL;
 
-   len = m_htons( *((uint16_t*)ptr) );
-   ptr += M_NAME_WIDTH_RDATA_SZ;
+   len = m_htons( *((uint16_t*)&(ptr[offset])) );
+   offset += M_NAME_WIDTH_RDATA_SZ;
 
-   /* TODO: Buffer length check. */
    for( i = 0 ; len > i ; i++ ) {
-      buf[i] = *(ptr++);
+      /* Garbage data emergency brake. */
+      if( offset > msg_buf_sz ) {
+         return -1;
+      }
+
+      buf[i] = ptr[offset++];
    }
 
-   return i;
+   return len;
 }
 
 /**
@@ -153,7 +156,7 @@ int mname_get_offset(
       }
 
       /* Garbage data emergency brake. */
-      if( offset >= msg_buf_sz ) {
+      if( offset > msg_buf_sz ) {
          return -1;
       }
 
