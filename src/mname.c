@@ -1,12 +1,6 @@
 
 #include "mname.h"
 
-void mname_response( struct mname_msg* msg_in, size_t msg_buf_sz ) {
-   msg_in->fields |= M_NAME_RESPONSE_FIELD;
-
-   msg_in->a_count = m_htons( 1 );
-}
-
 int mname_get_domain_len(
    const struct mname_msg* msg_in, size_t msg_buf_sz, uint16_t idx
 ) {
@@ -166,35 +160,85 @@ int mname_get_offset(
    return offset;
 }
 
-#if 0
 /*!
  * @return New msg packet length, or -1 on failure.
  */
-int mname_add_answer( struct mname_msg* msg, size_t buf_sz ) {
-   size_t domain_len = 0;
-   //uint16_t offset = 0;
-   uint16_t size = 0;
-   uint8_t* a_ptr = (uint8_t*)msg;
-   uint8_t* q_ptr = (uint8_t*)msg;
+int mname_add_answer(
+   struct mname_msg* msg, size_t msg_buf_sz,
+   char* domain, size_t domain_len,
+   uint16_t type, uint16_t class, uint32_t ttl,
+   char* rdata, size_t rdata_len
+) {
+   uint8_t* ptr = (uint8_t*)msg;
    uint16_t i = 0;
+   size_t a_record_sz = 0;
+   size_t a_record_offset = 0;
+   size_t last_domain_sz = 0;
+   uint8_t last_domain_sz_offset = 0;
+   uint16_t* field_ptr = NULL;
+   uint32_t* ttl_ptr = NULL;
 
-   size = mname_get_offset(
-      msg, (m_htons( msg->a_count ) + m_htons( msg->n_count ) +
-         m_htons( msg->l_count ) + 2) ) /* +2 for Q and end. */
+#if 0
+   for( i = 0 ; ip_len > i ; i++ ) {
+      a_record_sz++;
+      if( '.' == ip[i] ) {
+         a_record_sz++;
+      }
+   }
+#endif
 
-   domain_len = mname_get_domain_len( msg, 0 ); /* Q is always 0. */
-   a_ptr += mname_get_offset( msg, m_htons( msg->a_count ) + 1 );
-   q_ptr += mname_get_offset( msg, 0 );
-
-   /* TODO: Shift everything after this answer up. */
+   a_record_sz = M_NAME_WIDTH_DOMAIN_SZ + domain_len + M_NAME_WIDTH_TYPE +
+      M_NAME_WIDTH_CLASS + M_NAME_WIDTH_TTL + M_NAME_WIDTH_RDATA_SZ +
+      rdata_len;
+   a_record_offset = mname_get_offset( msg, msg_buf_sz, 1 );
+ 
+   /* Shift everything after this answer up. */
+   /* TODO: Bounds checking. */
+   for(
+      i = mname_get_msg_len( msg, msg_buf_sz ) - 1 ; a_record_offset <= i ; i--
+   ) {
+      ptr[i + a_record_sz] = ptr[i];
+      ptr[i] = 0;
+   }
 
    /* Copy the domain name. */
    /* TODO: Implement compression. */
-   for( i = 0 ; domain_len > i ; i++ ) {
-      a_ptr[i] = q_ptr[i];
+   last_domain_sz_offset = a_record_offset;
+   for(
+      i = a_record_offset + M_NAME_WIDTH_DOMAIN_SZ;
+      a_record_offset + domain_len > i;
+      i++
+   ) {
+      if( '.' == domain[i - a_record_offset - 1] ) {
+         /* Add length byte. */
+         ptr[last_domain_sz_offset] = last_domain_sz;
+         last_domain_sz_offset = i;
+         last_domain_sz = 0;
+      } else {
+         /* Copy domain segment character. */
+         ptr[i] = domain[i - a_record_offset - 1];
+         last_domain_sz++;
+      }
    }
 
-   /* TODO: Incremenr a_count. */
+   /* Set the response type and class. */
+   field_ptr =
+      (uint16_t*)&(ptr[a_record_offset + domain_len]);
+   *field_ptr = m_htons( type );
+   field_ptr =
+      (uint16_t*)&(ptr[a_record_offset + domain_len +
+      M_NAME_WIDTH_TYPE]);
+   *field_ptr = m_htons( class );
+
+   /* Set the TTL. */
+   ttl_ptr =
+      (uint32_t*)&(ptr[a_record_offset + domain_len +
+      M_NAME_WIDTH_TYPE + M_NAME_WIDTH_CLASS]);
+   *ttl_ptr = m_htonl( ttl );
+
+   /* Increment a_count. */
+   msg->a_count = m_htons( (m_htons( msg->a_count ) + 1) );
+
+   return a_record_sz;
 }
-#endif
 

@@ -79,6 +79,9 @@ struct mname_answer {
 #define m_name_is_response( pkt ) \
    ((pkt->fields) & M_NAME_RESPONSE_FIELD)
 
+#define m_name_set_response( pkt ) \
+   (pkt->fields |= M_NAME_RESPONSE_FIELD)
+
 #define m_name_is_op_status( pkt ) \
    ((pkt->fields) & M_NAME_OP_STATUS)
 
@@ -130,7 +133,6 @@ struct mname_answer {
 #define mname_get_msg_len( msg_in, msg_buf_sz ) \
    mname_get_offset( msg_in, msg_buf_sz, mname_get_records_count( msg_in ) )
 
-void mname_response( struct mname_msg* msg_in, size_t msg_buf_sz );
 int mname_get_domain_len(
    const struct mname_msg* msg_in, size_t msg_buf_sz, uint16_t idx );
 int mname_get_domain(
@@ -143,6 +145,10 @@ int mname_get_a_rdata(
    uint8_t* buf, size_t buf_len );
 int mname_get_offset( const struct mname_msg* msg_in, size_t msg_buf_sz,
    uint16_t idx );
+int mname_add_answer( struct mname_msg* msg, size_t msg_buf_sz,
+   char* domain, size_t domain_len,
+   uint16_t type, uint16_t class, uint32_t ttl,
+   char* rdata, size_t rdata_len );
 
 #endif /* MNAME_H */
 

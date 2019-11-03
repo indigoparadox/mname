@@ -12,9 +12,9 @@
 #include <errno.h>
 #include <assert.h>
 
-#define NAME_BUF_LEN 512
-#define PKT_BUF_LEN 512
-#define RDATA_BUF_LEN 512
+#define NAME_BUF_SZ 512
+#define PKT_BUF_SZ 512
+#define RDATA_BUF_SZ 512
 
 struct pkt_dump_highlight {
    uint16_t offset;
@@ -60,27 +60,27 @@ void pkt_dump_display(
 
       } else if(
          i < sizeof( struct mname_msg ) +
-         mname_get_domain_len( dns_msg, PKT_BUF_LEN, 0 )
+         mname_get_domain_len( dns_msg, PKT_BUF_SZ, 0 )
       ) {
          /* Question Domain */
          printf( "\033[0;33m" );
 
       } else if(
-         i < mname_get_offset( dns_msg, PKT_BUF_LEN, 1 )
+         i < mname_get_offset( dns_msg, PKT_BUF_SZ, 1 )
       ) {
          /* Question Fields */
          printf( "\033[0;34m" );
 
       } else if(
-         i < mname_get_offset( dns_msg, PKT_BUF_LEN, 1 ) +
-         mname_get_domain_len( dns_msg, PKT_BUF_LEN, 1 )
+         i < mname_get_offset( dns_msg, PKT_BUF_SZ, 1 ) +
+         mname_get_domain_len( dns_msg, PKT_BUF_SZ, 1 )
       ) {
          /* Answer/Addl Domain */
          printf( "\033[0;33m" );
 
       } else if(
-         i < mname_get_offset( dns_msg, PKT_BUF_LEN, 1 ) +
-         mname_get_domain_len( dns_msg, PKT_BUF_LEN, 1 ) +
+         i < mname_get_offset( dns_msg, PKT_BUF_SZ, 1 ) +
+         mname_get_domain_len( dns_msg, PKT_BUF_SZ, 1 ) +
          M_NAME_WIDTH_TYPE + M_NAME_WIDTH_CLASS + M_NAME_WIDTH_TTL
       ) {
          /* Answer/Addl Fields */
@@ -119,10 +119,10 @@ cleanup:
 void pkt_summarize( const uint8_t* pkt_buf, size_t count ) {
    uint16_t records_count = 0;
    int rd_len = 0;
-   char domain_name[NAME_BUF_LEN] = { 0 };
+   char domain_name[NAME_BUF_SZ] = { 0 };
    int i = 0, j = 0;
    struct mname_msg* dns_msg = (struct mname_msg*)pkt_buf;
-   uint8_t rdata_buf[RDATA_BUF_LEN] = { 0 };
+   uint8_t rdata_buf[RDATA_BUF_SZ] = { 0 };
    uint16_t size = 0;
 
    /* Handle incoming packets. */
@@ -152,29 +152,29 @@ void pkt_summarize( const uint8_t* pkt_buf, size_t count ) {
       m_htons( dns_msg->n_count ),
       m_htons( dns_msg->l_count ) );
 
-   size = mname_get_msg_len( dns_msg, PKT_BUF_LEN );
+   size = mname_get_msg_len( dns_msg, PKT_BUF_SZ );
    printf( "%d records, %ld read, %d size\n", records_count, count, size );
 
    for( i = 0 ; records_count > i ; i++ ) {
       printf( "record %d @ %d bytes:\n", i,
-         mname_get_offset( dns_msg, PKT_BUF_LEN, i ) );
+         mname_get_offset( dns_msg, PKT_BUF_SZ, i ) );
 
-      memset( domain_name, '\0', NAME_BUF_LEN );
+      memset( domain_name, '\0', NAME_BUF_SZ );
       assert(
-         mname_get_domain( dns_msg, PKT_BUF_LEN, i, domain_name, NAME_BUF_LEN ) 
-         == mname_get_domain_len( dns_msg, PKT_BUF_LEN, i ) );
+         mname_get_domain( dns_msg, PKT_BUF_SZ, i, domain_name, NAME_BUF_SZ ) 
+         == mname_get_domain_len( dns_msg, PKT_BUF_SZ, i ) );
       printf( " domain: %s (%d)\n type: %d\n class: %d\n",
          domain_name,
-         mname_get_domain_len( dns_msg, PKT_BUF_LEN, i ),
-         mname_get_type( dns_msg, PKT_BUF_LEN, i ),
-         mname_get_class( dns_msg, PKT_BUF_LEN, i ) );
+         mname_get_domain_len( dns_msg, PKT_BUF_SZ, i ),
+         mname_get_type( dns_msg, PKT_BUF_SZ, i ),
+         mname_get_class( dns_msg, PKT_BUF_SZ, i ) );
 
       if( 0 < i ) {
          /* Answer/Addl Record. */
-         printf( " ttl: %d\n", mname_get_a_ttl( dns_msg, PKT_BUF_LEN, i ) );
-         memset( rdata_buf, '\0', RDATA_BUF_LEN );
-         mname_get_a_rdata( dns_msg, PKT_BUF_LEN, i, rdata_buf, RDATA_BUF_LEN );
-         rd_len = mname_get_a_rdata_len( dns_msg, PKT_BUF_LEN, i  );
+         printf( " ttl: %d\n", mname_get_a_ttl( dns_msg, PKT_BUF_SZ, i ) );
+         memset( rdata_buf, '\0', RDATA_BUF_SZ );
+         mname_get_a_rdata( dns_msg, PKT_BUF_SZ, i, rdata_buf, RDATA_BUF_SZ );
+         rd_len = mname_get_a_rdata_len( dns_msg, PKT_BUF_SZ, i  );
          printf( " rdata (%d): ", rd_len );
          for( j = 0 ; rd_len > j ; j++ ) {
             printf( "%02hhx ", rdata_buf[j] );
@@ -190,7 +190,7 @@ void pkt_summarize( const uint8_t* pkt_buf, size_t count ) {
    fflush( 0 );
    assert( 0 != pkt_buf[size] );
    printf( "after pkt: " );
-   for( i = size ; PKT_BUF_LEN > i ; i++ ) {
+   for( i = size ; PKT_BUF_SZ > i ; i++ ) {
       printf( "%02hhx ", pkt_buf[i] );
       fflush( 0 );
       assert( 0 == pkt_buf[i] );
@@ -208,11 +208,13 @@ int main( int argc, char** argv ) {
    int res = 0;
    struct sockaddr_in server;
    struct sockaddr_storage client;
-   uint8_t pkt_buf[PKT_BUF_LEN] = { 0 };
+   uint8_t pkt_buf[PKT_BUF_SZ] = { 0 };
    ssize_t count = 0;
    socklen_t client_sz = sizeof( struct sockaddr_storage );
    struct mname_msg* dns_msg = (struct mname_msg*)&pkt_buf;
    int running = 1;
+   char domain_name[NAME_BUF_SZ] = { 0 };
+   size_t domain_name_len = 0;
 
    memset( &server, '\0', sizeof( struct sockaddr_in ) );
    memset( &client, '\0', sizeof( struct sockaddr_in ) );
@@ -238,7 +240,7 @@ int main( int argc, char** argv ) {
    while( running ) {
 
       /* Listen for incoming packets. */
-      count = recvfrom( sock, pkt_buf, PKT_BUF_LEN, 0,
+      count = recvfrom( sock, pkt_buf, PKT_BUF_SZ, 0,
          (struct sockaddr*)&client, &client_sz );
       if( 0 > count ) {
          fprintf( stderr, "recvfrom(): %s\n", strerror( errno ) );
@@ -247,10 +249,22 @@ int main( int argc, char** argv ) {
 
       pkt_summarize( pkt_buf, count );
 
-      assert( 1 == mname_get_class( dns_msg, PKT_BUF_LEN, 0 ) );
-      assert( 1 == mname_get_type( dns_msg, PKT_BUF_LEN, 0 ) );
+      assert( 1 == mname_get_class( dns_msg, PKT_BUF_SZ, 0 ) );
+      assert( 1 == mname_get_type( dns_msg, PKT_BUF_SZ, 0 ) );
 
-      mname_response( dns_msg, PKT_BUF_LEN );
+      /* Change the message to a response. */
+      m_name_set_response( dns_msg );
+      memset( domain_name, '\0', PKT_BUF_SZ );
+      domain_name_len = mname_get_domain(
+         dns_msg, PKT_BUF_SZ, 0, domain_name, NAME_BUF_SZ );
+      mname_add_answer( dns_msg, PKT_BUF_SZ, domain_name,
+         domain_name_len,
+         mname_get_type( dns_msg, PKT_BUF_SZ, 0 ),
+         mname_get_class( dns_msg, PKT_BUF_SZ, 0 ),
+         0,
+         "1.1.1.1", 7 );
+
+      pkt_summarize( pkt_buf, count );
 
       /* Send response back to requester. */
       count = sendto( sock, pkt_buf, count, 0,
