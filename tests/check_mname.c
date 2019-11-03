@@ -7,8 +7,12 @@
 
 #define NAME_BUF_SZ 512
 #define RDATA_BUF_SZ 512
+#define RESPONSE_BUF_SZ 512
 
-struct mname_msg* dns_pkt = (struct mname_msg*)dnspkt_bin;
+struct mname_msg* dns_pkt = NULL;
+unsigned int dns_pkt_len = 0;
+
+uint8_t* dns_response_buffer[RESPONSE_BUF_SZ] = { 0 };
 
 #define TEST_RDATA_SZ
 uint8_t test_rdata[TEST_RDATA_SZ] = { 0x00, 0x0a, 0x00, 0x08, 0xf5, 0x0e,
@@ -27,76 +31,129 @@ START_TEST( test_m_htonl ) {
 END_TEST
 
 START_TEST( test_q_domain_len ) {
-   ck_assert_int_eq( 12, mname_get_domain_len( dns_pkt, dnspkt_bin_len, 0 ) );
+   ck_assert_int_eq( 12, mname_get_domain_len( dns_pkt, dns_pkt_len, 0 ) );
 }
 END_TEST
 
 START_TEST( test_q_domain ) {
    char domain[NAME_BUF_SZ] = { 0 };
    int len = 0;
-   len = mname_get_domain( dns_pkt, dnspkt_bin_len, 0, domain, NAME_BUF_SZ );
+   len = mname_get_domain( dns_pkt, dns_pkt_len, 0, domain, NAME_BUF_SZ );
    ck_assert_str_eq( domain, "google.com." );
    ck_assert_int_eq( len, 12 );
 }
 END_TEST
 
 START_TEST( test_q_class ) {
-   ck_assert_int_eq( 1, mname_get_class( dns_pkt, dnspkt_bin_len, 0 ) );
+   ck_assert_int_eq( 1, mname_get_class( dns_pkt, dns_pkt_len, 0 ) );
 }
 END_TEST
 
 START_TEST( test_q_type ) {
-   ck_assert_int_eq( 1, mname_get_type( dns_pkt, dnspkt_bin_len, 0 ) );
+   ck_assert_int_eq( 1, mname_get_type( dns_pkt, dns_pkt_len, 0 ) );
 }
 END_TEST
 
-START_TEST( test_a_class ) {
-   ck_assert_int_eq( 4096, mname_get_class( dns_pkt, dnspkt_bin_len, 1 ) );
+START_TEST( test_l_class ) {
+   ck_assert_int_eq( 4096, mname_get_class( dns_pkt, dns_pkt_len, _i ) );
 }
 END_TEST
 
-START_TEST( test_a_type ) {
-   ck_assert_int_eq( 41, mname_get_type( dns_pkt, dnspkt_bin_len, 1 ) );
+START_TEST( test_l_type ) {
+   ck_assert_int_eq( 41, mname_get_type( dns_pkt, dns_pkt_len, _i ) );
 }
 END_TEST
 
-START_TEST( test_a_ttl ) {
-   ck_assert_int_eq( 0, mname_get_a_ttl( dns_pkt, dnspkt_bin_len, 1 ) );
+START_TEST( test_l_ttl ) {
+   ck_assert_int_eq( 0, mname_get_a_ttl( dns_pkt, dns_pkt_len, _i ) );
 }
 END_TEST
 
-START_TEST( test_a_rdata_len ) {
-   ck_assert_int_eq( 12, mname_get_a_rdata_len( dns_pkt, dnspkt_bin_len, 1 ) );
+START_TEST( test_l_rdata_len ) {
+   ck_assert_int_eq( 12, mname_get_a_rdata_len( dns_pkt, dns_pkt_len, _i ) );
 }
 END_TEST
 
 START_TEST( test_sz ) {
    ck_assert_int_eq(
-      dnspkt_bin_len, mname_get_msg_len( dns_pkt, dnspkt_bin_len ) );
+      dns_pkt_len, mname_get_msg_len( dns_pkt, dns_pkt_len ) );
 }
 END_TEST
 
+static void setup_pkt_sample() {
+   dns_pkt = (struct mname_msg*)dnspkt_bin;
+   dns_pkt_len = dnspkt_bin_len;
+}
+
+static void teardown_pkt_sample() {
+}
+
+static void setup_pkt_response() {
+   char domain_name[NAME_BUF_SZ] = { 0 };
+   size_t domain_name_len = 0;
+
+   memcpy( dns_response_buffer, dnspkt_bin, dnspkt_bin_len );
+   dns_pkt = (struct mname_msg*)dns_response_buffer;
+   dns_pkt_len = dnspkt_bin_len;
+
+   /* Change the message to a response. */
+   m_name_set_response( dns_pkt );
+   memset( domain_name, '\0', NAME_BUF_SZ );
+   domain_name_len = mname_get_domain(
+      dns_pkt, RESPONSE_BUF_SZ, 0, domain_name, NAME_BUF_SZ );
+   mname_add_answer( dns_pkt, RESPONSE_BUF_SZ, domain_name,
+      domain_name_len,
+      mname_get_type( dns_pkt, RESPONSE_BUF_SZ, 0 ),
+      mname_get_class( dns_pkt, RESPONSE_BUF_SZ, 0 ),
+      0,
+      "1.1.1.1", 7 );
+}
+
+static void teardown_response() {
+}
+
 Suite* mname_suite( void ) {
    Suite* s = NULL;
-   TCase* tc_respond = NULL;
+   TCase* tc_sample = NULL;
+   TCase* tc_response = NULL;
 
    s = suite_create( "mname" );
 
-   tc_respond = tcase_create( "Respond" );
+   tc_sample = tcase_create( "Sample" );
+   tc_response = tcase_create( "Response" );
+   tcase_add_checked_fixture(
+      tc_sample, setup_pkt_sample, teardown_pkt_sample );
+   tcase_add_checked_fixture(
+      tc_response, setup_pkt_response, teardown_response );
 
-   tcase_add_test( tc_respond, test_m_htons );
-   tcase_add_test( tc_respond, test_m_htonl );
-   tcase_add_test( tc_respond, test_q_domain_len );
-   tcase_add_test( tc_respond, test_q_domain );
-   tcase_add_test( tc_respond, test_q_type );
-   tcase_add_test( tc_respond, test_q_class );
-   tcase_add_test( tc_respond, test_a_type );
-   tcase_add_test( tc_respond, test_a_class );
-   tcase_add_test( tc_respond, test_a_ttl );
-   tcase_add_test( tc_respond, test_a_rdata_len );
-   tcase_add_test( tc_respond, test_sz );
+   /* Test the parsing of the incoming packet. */
+   tcase_add_test( tc_sample, test_m_htons );
+   tcase_add_test( tc_sample, test_m_htonl );
+   tcase_add_test( tc_sample, test_q_domain_len );
+   tcase_add_test( tc_sample, test_q_domain );
+   tcase_add_test( tc_sample, test_q_type );
+   tcase_add_test( tc_sample, test_q_class );
+   tcase_add_loop_test( tc_sample, test_l_type, 1, 2 );
+   tcase_add_loop_test( tc_sample, test_l_class, 1, 2 );
+   tcase_add_loop_test( tc_sample, test_l_ttl, 1, 2 );
+   tcase_add_loop_test( tc_sample, test_l_rdata_len, 1, 2 );
+   tcase_add_test( tc_sample, test_sz );
 
-   suite_add_tcase( s, tc_respond );
+   /* Test our crafted response. */
+   tcase_add_test( tc_response, test_m_htons );
+   tcase_add_test( tc_response, test_m_htonl );
+   tcase_add_test( tc_response, test_q_domain_len );
+   tcase_add_test( tc_response, test_q_domain );
+   tcase_add_test( tc_response, test_q_type );
+   tcase_add_test( tc_response, test_q_class );
+   tcase_add_loop_test( tc_response, test_l_type, 2, 3 );
+   tcase_add_loop_test( tc_response, test_l_class, 2, 3 );
+   tcase_add_loop_test( tc_response, test_l_ttl, 2, 3 );
+   tcase_add_loop_test( tc_response, test_l_rdata_len, 2, 3 );
+   tcase_add_test( tc_response, test_sz );
+
+   suite_add_tcase( s, tc_sample );
+   suite_add_tcase( s, tc_response );
 
    return s;
 }
