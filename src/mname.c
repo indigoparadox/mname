@@ -165,9 +165,9 @@ int mname_get_offset(
  */
 int mname_add_answer(
    struct mname_msg* msg, size_t msg_buf_sz,
-   char* domain, size_t domain_len,
+   char* domain, uint8_t domain_len,
    uint16_t type, uint16_t class, uint32_t ttl,
-   char* rdata, size_t rdata_len
+   char* rdata, uint16_t rdata_len
 ) {
    uint8_t* ptr = (uint8_t*)msg;
    uint16_t i = 0;
@@ -235,6 +235,12 @@ int mname_add_answer(
       (uint32_t*)&(ptr[a_record_offset + domain_len +
       M_NAME_WIDTH_TYPE + M_NAME_WIDTH_CLASS]);
    *ttl_ptr = m_htonl( ttl );
+
+   /* Set the RDATA length. */
+   field_ptr =
+      (uint16_t*)&(ptr[a_record_offset + domain_len +
+      M_NAME_WIDTH_TYPE + M_NAME_WIDTH_CLASS + M_NAME_WIDTH_TTL]);
+   *field_ptr = m_htons( rdata_len );
 
    /* Increment a_count. */
    msg->a_count = m_htons( (m_htons( msg->a_count ) + 1) );
