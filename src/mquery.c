@@ -14,15 +14,6 @@
 
 #include "mpktdmp.h"
 
-struct pkt_dump_highlight {
-   uint16_t offset;
-   char ansi[6];
-};
-
-void pkt_dump_setup() {
-
-}
-
 int main( int argc, char** argv ) {
    int sock = 0;
    int res = 0;
@@ -84,7 +75,7 @@ int main( int argc, char** argv ) {
          0,
          "1.1.1.1", 7 );
 
-      pkt_summarize( pkt_buf, count );
+      pkt_summarize( pkt_buf, count + 29 );
 
       /* Send response back to requester. */
       count = sendto( sock, pkt_buf, count, 0,

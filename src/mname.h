@@ -57,6 +57,15 @@
 #define M_NAME_WIDTH_DOMAIN_SZ            1
 #define M_NAME_WIDTH_RDATA_SZ             2
 
+#define M_NAME_WIDTH_Q( msg, buf_sz ) \
+   (mname_get_domain_len( msg, buf_sz, 0 ) + \
+   M_NAME_WIDTH_TYPE + M_NAME_WIDTH_CLASS)
+
+#define M_NAME_WIDTH_A( msg, buf_sz, idx ) \
+   (mname_get_domain_len( msg, buf_sz, idx ) + \
+   M_NAME_WIDTH_TYPE + M_NAME_WIDTH_CLASS + M_NAME_WIDTH_TTL + \
+   mname_get_a_rdata_len( msg, buf_sz, idx ) + M_NAME_WIDTH_RDATA_SZ)
+
 struct mname_msg {
    uint16_t id;
    uint16_t fields;

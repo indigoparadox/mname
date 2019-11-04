@@ -7,11 +7,17 @@
 #include <assert.h>
 #include <errno.h>
 
+void pkt_dump_setup() {
+
+}
+
 void pkt_dump_display(
    const struct mname_msg* dns_msg, size_t sz
 ) {
    int i = 0;
    const uint8_t* buffer = (const uint8_t*)dns_msg;
+   size_t record_idx = 0;
+   size_t record_offset = 0;
 
    printf( "\n" );
 
@@ -34,46 +40,61 @@ void pkt_dump_display(
       if( 0 != i && 0 == i % 21 ) {
          printf( "\n" );
       }
-      
+
       /* Add some color. */
       if( i < sizeof( struct mname_msg ) ) {
          /* Header */
-         printf( "\033[0;31m" );
+         printf( "\033[0;31m" ); /* Red */
 
       } else if(
          i < sizeof( struct mname_msg ) +
          mname_get_domain_len( dns_msg, PKT_BUF_SZ, 0 )
       ) {
          /* Question Domain */
-         printf( "\033[0;33m" );
+         printf( "\033[0;33m" ); /* Yellow */
 
       } else if(
          i < mname_get_offset( dns_msg, PKT_BUF_SZ, 1 )
       ) {
          /* Question Fields */
-         printf( "\033[0;34m" );
+         printf( "\033[0;34m" ); /* Blue */
 
       } else if(
-         i < mname_get_offset( dns_msg, PKT_BUF_SZ, 1 ) +
-         mname_get_domain_len( dns_msg, PKT_BUF_SZ, 1 )
+         i < mname_get_offset( dns_msg, PKT_BUF_SZ, record_idx ) +
+         mname_get_domain_len( dns_msg, PKT_BUF_SZ, record_idx )
       ) {
          /* Answer/Addl Domain */
-         printf( "\033[0;33m" );
+         printf( "\033[0;33m" ); /* Yellow */
 
       } else if(
-         i < mname_get_offset( dns_msg, PKT_BUF_SZ, 1 ) +
-         mname_get_domain_len( dns_msg, PKT_BUF_SZ, 1 ) +
+         i < mname_get_offset( dns_msg, PKT_BUF_SZ, record_idx ) +
+         mname_get_domain_len( dns_msg, PKT_BUF_SZ, record_idx ) +
          M_NAME_WIDTH_TYPE + M_NAME_WIDTH_CLASS + M_NAME_WIDTH_TTL
       ) {
          /* Answer/Addl Fields */
-         printf( "\033[0;32m" );
+         printf( "\033[0;32m" ); /* Green */
 
       } else {
          /* ??? */
-         printf( "\033[0;36m" );
+         printf( "\033[0;36m" ); /* Cyan */
       }
 
       printf( "%02hhx ", buffer[i] );
+
+      /* Advance the record? */
+      if(
+         0 == record_idx &&
+         i > record_offset + M_NAME_WIDTH_Q( dns_msg, PKT_BUF_SZ )
+      ) {
+         record_idx++;
+         record_offset = mname_get_offset( dns_msg, PKT_BUF_SZ, record_idx );
+      } else if(
+         0 < record_idx &&
+         i > record_offset + M_NAME_WIDTH_A( dns_msg, PKT_BUF_SZ, record_idx )
+      ) {
+         record_idx++;
+         record_offset = mname_get_offset( dns_msg, PKT_BUF_SZ, record_idx );
+      }
    }
    printf( "\033[0m" );
    printf( "\n\n" );

@@ -187,7 +187,7 @@ int mname_add_answer(
    }
 #endif
 
-   a_record_sz = M_NAME_WIDTH_DOMAIN_SZ + domain_len + M_NAME_WIDTH_TYPE +
+   a_record_sz = domain_len + M_NAME_WIDTH_TYPE +
       M_NAME_WIDTH_CLASS + M_NAME_WIDTH_TTL + M_NAME_WIDTH_RDATA_SZ +
       rdata_len;
    a_record_offset = mname_get_offset( msg, msg_buf_sz, 1 );
@@ -195,7 +195,9 @@ int mname_add_answer(
    /* Shift everything after this answer up. */
    /* TODO: Bounds checking. */
    for(
-      i = mname_get_msg_len( msg, msg_buf_sz ) - 1 ; a_record_offset <= i ; i--
+      i = mname_get_msg_len( msg, msg_buf_sz ) - 1;
+      a_record_offset < i;
+      i--
    ) {
       ptr[i + a_record_sz] = ptr[i];
       ptr[i] = 0;
@@ -241,6 +243,13 @@ int mname_add_answer(
       (uint16_t*)&(ptr[a_record_offset + domain_len +
       M_NAME_WIDTH_TYPE + M_NAME_WIDTH_CLASS + M_NAME_WIDTH_TTL]);
    *field_ptr = m_htons( rdata_len );
+
+   /* Copy the rdata. */
+   ptr = (uint8_t*)field_ptr;
+   ptr += M_NAME_WIDTH_RDATA_SZ;
+   for( i = 0 ; i < rdata_len ; i++ ) {
+      ptr[i] = rdata[i];
+   }
 
    /* Increment a_count. */
    msg->a_count = m_htons( (m_htons( msg->a_count ) + 1) );

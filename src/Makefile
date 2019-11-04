@@ -37,7 +37,7 @@ mquery: OBJDIR := ../obj/mquery
 
 all: $(BINDIR_LINUX)/libmname.a $(BINDIR_MSP430G2553)/libmname.a mquery
 
-test_mname: $(BINDIR_LINUX)/libmname.a $(OBJDIR_TESTS)/check.o $(OBJDIR_TESTS)/check_mname.o
+test_mname: $(BINDIR_LINUX)/libmname.a $(OBJDIR_TESTS)/check.o $(OBJDIR_TESTS)/check_mname.o $(OBJDIR_TESTS)/mpktdmp.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 mquery: $(BINDIR_LINUX)/libmname.a ../obj/linux/mquery.o ../obj/linux/mpktdmp.o
@@ -52,6 +52,10 @@ $(BINDIR_MSP430G2553)/libmname.a: $(addprefix ../obj/msp430g2553/,$(OBJECTS))
 	$(AR) rcs $@ $^
 
 ../obj/linux/%.o: $(notdir %.c)
+	$(MD) $(OBJDIR)
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+$(OBJDIR_TESTS)/mpktdmp.o: $(notdir mpktdmp.c)
 	$(MD) $(OBJDIR)
 	$(CC) -c -o $@ $< $(CFLAGS)
 

@@ -1,6 +1,7 @@
 
 #include <check.h>
 #include "../src/mname.h"
+#include "../src/mpktdmp.h"
 #include "dnspkt.h"
 
 #include <stdio.h>
@@ -15,7 +16,7 @@
 struct mname_msg* dns_pkt = NULL;
 unsigned int dns_pkt_len = 0;
 
-uint8_t* dns_response_buffer[RESPONSE_BUF_SZ] = { 0 };
+uint8_t dns_response_buffer[RESPONSE_BUF_SZ] = { 0 };
 
 #define TEST_RDATA_SZ
 uint8_t test_rdata[TEST_RDATA_SZ] = { 0x00, 0x0a, 0x00, 0x08, 0xf5, 0x0e,
@@ -145,6 +146,8 @@ static void setup_pkt_response() {
       mname_get_type( dns_pkt, RESPONSE_BUF_SZ, 0 ),
       mname_get_class( dns_pkt, RESPONSE_BUF_SZ, 0 ),
       0, TEST_A_RDATA, TEST_A_RDATA_SZ );
+
+   pkt_dump_file( "apkt.bin", dns_response_buffer, RESPONSE_BUF_SZ );
 }
 
 static void teardown_response() {
