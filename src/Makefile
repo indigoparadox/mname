@@ -40,7 +40,7 @@ all: $(BINDIR_LINUX)/libmname.a $(BINDIR_MSP430G2553)/libmname.a mquery
 test_mname: $(BINDIR_LINUX)/libmname.a $(OBJDIR_TESTS)/check.o $(OBJDIR_TESTS)/check_mname.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-mquery: $(BINDIR_LINUX)/libmname.a ../obj/linux/mquery.o
+mquery: $(BINDIR_LINUX)/libmname.a ../obj/linux/mquery.o ../obj/linux/mpktdmp.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 $(BINDIR_LINUX)/libmname.a: $(addprefix ../obj/linux/,$(OBJECTS))
