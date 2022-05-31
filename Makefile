@@ -1,16 +1,16 @@
 
 # vim: ft=make noexpandtab
 
-OBJECTS := obj/src/mname.o obj/src/mpktdmp.o
+BINDIR = bin
+OBJDIR = obj
+
+OBJECTS := $(OBJDIR)/src/mname.o $(OBJDIR)/src/mpktdmp.o
 OBJECTS_TESTS := \
-	obj/tests/check.o obj/tests/check_mname.o
+	$(OBJDIR)/tests/check.o $(OBJDIR)/tests/check_mname.o
 
 MD=mkdir -v -p
 
-CFLAGS := -Wall -Werror
-
-BINDIR = bin
-OBJDIR = obj
+CFLAGS := -Wall -Werror -fpic
 
 test_mname: LDFLAGS += $(shell pkg-config --libs check) -L$(BINDIR)/static -lmname
 test_mname: CFLAGS += -DCHECK -g -Wall -Werror
@@ -18,17 +18,21 @@ test_mname: CFLAGS += -DCHECK -g -Wall -Werror
 mquery: LDFLAGS += -L$(BINDIR)/static -lmname
 mquery: CFLAGS += -g -Wall -Werror
 
-all: $(BINDIR)/static/libmname.a mquery test_mname
+all: $(BINDIR)/static/libmname.a $(BINDIR)/shared/libmname.so mquery test_mname
 
 test_mname: $(OBJECTS_TESTS) | $(BINDIR)/static/libmname.a
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-mquery: obj/src/mquery.o $(OBJECTS) | $(BINDIR)/static/libmname.a
+mquery: $(OBJDIR)/src/mquery.o $(OBJECTS) | $(BINDIR)/static/libmname.a
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 $(BINDIR)/static/libmname.a: $(OBJECTS)
 	$(MD) $(dir $@)
 	$(AR) rcs $@ $^
+
+$(BINDIR)/shared/libmname.so: $(OBJECTS)
+	$(MD) $(dir $@)
+	$(CC) -shared -o $@ $^
 
 $(OBJDIR)/%.o: %.c
 	$(MD) $(dir $@)
@@ -39,5 +43,6 @@ $(OBJDIR)/%.o: %.c
 clean:
 	rm -rf $(OBJDIR); \
 	rm -f test_mname; \
-	rm -rf $(BINDIR)
+	rm -rf $(BINDIR) \
+	rm -f mquery
 
