@@ -1,5 +1,7 @@
 bin
 obj
-src/mquery
-src/test_mname
+mquery
+test_mname
 dnspkt.bin
+apkt.bin
+doc
