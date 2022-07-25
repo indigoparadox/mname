@@ -43,6 +43,7 @@ $(OBJDIR)/%.o: %.c
 clean:
 	rm -rf $(OBJDIR); \
 	rm -f test_mname; \
-	rm -rf $(BINDIR) \
+	rm -rf $(BINDIR); \
+	rm -rf doc; \
 	rm -f mquery
 
