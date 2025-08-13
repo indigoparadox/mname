@@ -26,9 +26,12 @@ int main( int argc, char** argv ) {
    int running = 1;
    char domain_name[NAME_BUF_SZ] = { 0 };
    size_t domain_name_len = 0;
+   uint32_t ip_res = 0x01010101;
 
    memset( &server, '\0', sizeof( struct sockaddr_in ) );
    memset( &client, '\0', sizeof( struct sockaddr_in ) );
+
+   printf( "opening socket...\n" );
 
    /* Create the socket. */
    sock = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP );
@@ -39,14 +42,20 @@ int main( int argc, char** argv ) {
 
    /* Bind to the DNS port. */
    server.sin_family = AF_INET;
-   server.sin_port = 53; /* Yes, this is wrong, but it's unpriv. */
+   server.sin_port = htons( 53 );
    server.sin_addr.s_addr = htonl( INADDR_ANY );
+
+   printf( "attempting to listen on %x port %d...\n",
+      server.sin_addr.s_addr, server.sin_port );
 
    res = bind( sock, (struct sockaddr*)&server, sizeof( struct sockaddr_in ) );
    if( 0 > res ) {
       fprintf( stderr, "bind(): %s\n", strerror( errno ) );
       goto cleanup;
    }
+
+   printf( "listening on %x port %d...\n",
+      server.sin_addr.s_addr, server.sin_port );
 
    while( running ) {
 
@@ -58,6 +67,7 @@ int main( int argc, char** argv ) {
          goto cleanup;
       }
 
+      printf( "received:\n" );
       pkt_summarize( pkt_buf, count );
 
       assert( 1 == mname_get_class( dns_msg, PKT_BUF_SZ, 0 ) );
@@ -73,7 +83,9 @@ int main( int argc, char** argv ) {
          mname_get_type( dns_msg, PKT_BUF_SZ, 0 ),
          mname_get_class( dns_msg, PKT_BUF_SZ, 0 ),
          0,
-         "1.1.1.1", 7 );
+         (char*)&ip_res, 4 );
+
+      printf( "sending:\n" );
 
       pkt_summarize( pkt_buf, count + 29 );
 
@@ -84,6 +96,8 @@ int main( int argc, char** argv ) {
          fprintf( stderr, "sendto(): %s\n", strerror( errno ) );
          goto cleanup;
       }
+
+      printf( "--- done! ---\n" );
 
    }
 

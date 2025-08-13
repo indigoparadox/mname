@@ -21,6 +21,15 @@ void pkt_dump_display(
 
    printf( "\n" );
 
+   printf( "\033[0;31mHeader\n" ); /* Red */
+   printf( "\033[0;33mQuestion Domain\n" ); /* Yellow */
+   printf( "\033[0;34mQuestion Fields\n" ); /* Blue */
+   printf( "\033[0;33mAnswer/Addl Domain\n" ); /* Yellow */
+   printf( "\033[0;32mAnswer/Addl Fields\n" ); /* Green */
+   printf( "\033[0;36m???" ); /* Cyan */
+
+   printf( "\033[0m\n" );
+
    /* Pretty header for hex dump. */
    i = 0;
    do {
